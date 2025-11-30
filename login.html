@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - LearnBridge</title>
+  <link rel="stylesheet" href="style.css">
+
+  <style>
+    .popup {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #ff4b4b;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 6px;
+      display: none;
+      font-weight: bold;
+      z-index: 9999;
+    }
+    .popup.success {
+      background: #28a745;
+    }
+  </style>
+</head>
+
+<body class="login-page" style="background-image: url('assets/banners/uj-bg.jpg');">
+
+  <!-- Popup -->
+  <div id="popup" class="popup"></div>
+
+  <!-- Top Left Logo -->
+  <img src="assets/logos/uj.png" alt="UJ Logo" class="top-left-logo">
+
+  <!-- Login Box -->
+  <div class="login-box">
+    <h2>LearnBridge 🎓</h2>
+
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Password">
+    <button onclick="login()">Login</button>
+
+    <p>Don't have an account? <a href="uj-signup.html">Sign Up</a></p>
+
+    <p><a href="#" class="forgot">Forgot Password?</a></p>
+
+    <p class="footer">© 2025 University of Johannesburg | LearnBridge</p>
+  </div>
+
+  <!-- LOGIN SCRIPT -->
+  <script>
+    function showPopup(message, success = false) {
+      const popup = document.getElementById("popup");
+      popup.textContent = message;
+      popup.className = success ? "popup success" : "popup";
+      popup.style.display = "block";
+      setTimeout(() => popup.style.display = "none", 3000);
+    }
+
+    function login() {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+
+      // ADMIN LOGIN
+      if (email === "admin@gmail.com" && password === "admin123") {
+        showPopup("Admin login successful!", true);
+        setTimeout(() => window.location.href = "admin.html", 1200);
+        return;
+      }
+
+      // GET USERS
+      const users = JSON.parse(localStorage.getItem("learnbridge_users") || "[]");
+
+      const user = users.find(u => u.email === email && u.password === password);
+
+      if (!user) {
+        showPopup("Login failed: User not found. Please sign up.");
+        return;
+      }
+
+      // SUCCESSFUL LOGIN
+      showPopup("Login successful!", true);
+      setTimeout(() => {
+        if (user.role === "student") window.location.href = "student.html";
+        if (user.role === "tutor") window.location.href = "tutor.html";
+        if (user.role === "counsellor") window.location.href = "counsellor.html";
+      }, 1200);
+    }
+  </script>
+
+</body>
+</html>
+
