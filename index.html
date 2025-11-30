@@ -1,23 +1,45 @@
-<!DOCTYPE html> 
-<html lang="en"> 
-<head> 
-  <meta charset="UTF-8"> 
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
-  <title>MentorHub — University of Johannesburg</title> 
-  <link rel="stylesheet" href="style.css"> 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UJ Login - LearnBridge</title>
+  <link rel="stylesheet" href="style.css">
+</head>
 
+<body class="login-page" style="background-image: url('assets/banners/uj-bg.jpg');">
 
+  <!-- Top Left Logo -->
+  <img src="assets/logos/uj.png" alt="UJ Logo" class="top-left-logo">
 
-</head> 
-<body class="choose-page"> 
-  <div class="container"> 
-    <h1>University of Johannesburg</h1> 
-    <div class="university-buttons"> 
-      <button onclick="window.location.href='uj.html'"> 
-        <img src="assets/logos/uj.png" alt="UJ Logo"> 
-        University of Johannesburg 
-      </button> 
-    </div> 
-  </div> 
-</body> 
+  <!-- Login Box -->
+  <div class="login-box">
+    <h2>LearnBridge 🎓</h2>
+
+    <!-- Login Inputs -->
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Password">
+    <button id="loginBtn" onclick="login()">Login</button>
+
+    <p>Don't have an account? <a href="uj-signup.html">Sign Up</a></p>
+
+    <p><a href="#" class="forgot">Forgot Password?</a></p>
+
+    <p class="footer">© 2025 University of Johannesburg | LearnBridge</p>
+    <div class="footer-links">
+      <a href="#">Privacy Policy</a> |
+      <a href="#">Terms of Use</a> |
+      <a href="#">Contact Support</a>
+    </div>
+  </div>
+
+  <!-- Login Script -->
+  <script>
+    function login() {
+      // Placeholder redirect after login
+      window.location.href = "dashboard.html";
+    }
+  </script>
+
+</body>
 </html>
