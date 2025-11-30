@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>UJ Admin Portal</title>
@@ -20,11 +19,46 @@
     }
     .portal-header img {height:56px;}
     .portal-title {font-size:1.5rem;font-weight:700;color:#fff;}
+    
+    /* Portal layout */
     .portal-container {
-      max-width:1200px;width:100%;margin:40px auto;background:rgba(255,255,255,0.9);
-      backdrop-filter:blur(14px);border-radius:16px;padding:30px 40px;
-      box-shadow:0 10px 40px rgba(0,0,0,0.3);
+      max-width:1200px;width:100%;margin:40px auto;
+      display:flex;gap:20px;
     }
+    /* Sidebar */
+    .sidebar {
+      flex:0 0 200px;
+      background:rgba(0,0,0,0.3);
+      border-radius:12px;
+      padding:20px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+    .sidebar button {
+      background:rgba(255,255,255,0.8);
+      border:none;
+      padding:10px 15px;
+      border-radius:8px;
+      font-size:1rem;
+      cursor:pointer;
+      transition:0.3s;
+    }
+    .sidebar button.active, .sidebar button:hover {
+      background:#ff7a00;
+      color:#fff;
+    }
+    /* Main content */
+    .main-content {
+      flex:1;
+      background:rgba(255,255,255,0.9);
+      border-radius:16px;
+      padding:30px 40px;
+      backdrop-filter:blur(14px);
+      box-shadow:0 10px 40px rgba(0,0,0,0.3);
+      min-height:500px;
+    }
+
     .portal-banner {
       width:100%;height:180px;border-radius:14px;
       background-image:url("assets/banners/uj-banner.jpg");
@@ -34,14 +68,18 @@
     h1{font-size:2rem;color:#ff7a00;margin-bottom:8px;}
     p{color:#222;margin-bottom:20px;}
     footer{margin-top:40px;font-size:13px;color:#fff;text-align:center;padding:10px;opacity:.8;}
+    
+    @media(max-width:900px){
+      .portal-container{flex-direction:column;}
+      .sidebar{flex:unset;width:100%;flex-direction:row;overflow-x:auto;}
+      .sidebar button{flex:1;white-space:nowrap;}
+    }
     @media(max-width:700px){
       .portal-container{padding:20px;}
       .portal-header{flex-direction:column;gap:10px;}
       .portal-title{font-size:1.2rem;}
     }
   </style>
-
-  
 </head>
 <body class="portal-page uj-admin">
   <header class="portal-header">
@@ -50,18 +88,27 @@
   </header>
 
   <main class="portal-container">
-    <div class="portal-banner"></div>
-    <section class="portal-welcome">
-      <h1>Welcome, Admin 👩‍🏫</h1>
-      <p>Your central hub for managing users, requests, sessions, and platform content.</p>
-    </section>
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <button id="menu-dashboard" class="active">🏠 Dashboard</button>
+      <button id="menu-manage-users">👥 Manage Users</button>
+      <button id="logout-btn">🚪 Logout</button>
+    </div>
+
+    <!-- Main content area -->
+    <div class="main-content" id="main-content">
+      <!-- Banner + Welcome (default content) -->
+      <div class="portal-banner"></div>
+      <section class="portal-welcome">
+        <h1>Welcome, Admin 👩‍🏫</h1>
+        <p>Your central hub for managing users, requests, sessions, and platform content.</p>
+      </section>
+    </div>
   </main>
-
-
 
   <footer>© 2025 University of Johannesburg | Admin Assistance Portal | Powered by EduProAssist</footer>
 
   <script src="admin-portal.js"></script>
-  
 </body>
 </html>
+
