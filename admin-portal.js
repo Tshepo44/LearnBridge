@@ -220,22 +220,7 @@
       $$('.nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.view==='manage-users'));
     });
 
-    $('#createUserBtn').addEventListener('click', () => openUserModal('create'));
-    $('#exportBtn').addEventListener('click', () => {
-      const data = JSON.stringify(loadUsers(), null, 2);
-      const blob = new Blob([data], {type:'application/json'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = 'learnbridge-users.json'; a.click();
-      URL.revokeObjectURL(url);
-    });
-    $('#clearAllBtn').addEventListener('click', () => {
-      if(confirm('Clear all users and audit logs? This cannot be undone (for dev/testing).')){
-        saveUsers([]);
-        saveAudit([]);
-        recordAudit('Cleared all users (dev)', 'admin');
-        renderDashboard();
-      }
-    });
+
   }
 
   /* ---------- MANAGE USERS ---------- */
