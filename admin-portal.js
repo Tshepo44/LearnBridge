@@ -509,6 +509,13 @@
               <label class="small-muted">Email</label>
               <input id="m_email" type="text" value="${escapeHtml(user?user.email:'')}" />
             </div>
+
+            <div style="flex:1;min-width:220px">
+            <label class="small-muted">Temporary Password</label>
+            <input id="m_password" type="text" placeholder="Set temporary password" 
+             value="${user ? escapeHtml(user.password || '') : ''}" />
+             </div>
+
             <div style="flex:1;min-width:180px">
               <label class="small-muted">Department</label>
               <input id="m_dept" type="text" value="${escapeHtml(user?user.department||'':'')}" />
@@ -561,8 +568,12 @@
           const users = loadUsers();
           const newUser = {
             id: uid(),
-            name, role, email, department,
+            name,
+            role, 
+            email, 
+            department,
             notes,
+            password: $('#m_password').value.trim(),
             created: now(),
             verified: true,
             suspended: false,
