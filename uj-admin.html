@@ -64,35 +64,30 @@
       .portal-header { flex-direction: column; gap: 10px; }
       .portal-title { font-size: 1.2rem; }
     }
-
-    <div class="sidebar">
-  <h2>LearnBridge Admin</h2>
-  <button id="menu-dashboard" class="active">📊 Dashboard</button>
-  <button id="menu-manage-users">👥 Manage Users</button>
-  <button id="logout-btn">🚪 Logout</button>
-</div>
-
-    <div class="portal-main" id="main-content">
-  <!-- JS will render Dashboard / Manage Users here -->
-</div>
-
   </style>
 </head>
 <body class="portal-page uj-admin">
+
+  <!-- Header -->
   <header class="portal-header">
     <img src="assets/logos/uj.png" alt="UJ Logo" />
     <div class="portal-title">University of Johannesburg Admin Portal</div>
   </header>
 
-  <main class="portal-container">
-    <div class="portal-banner"></div>
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <h2>LearnBridge Admin</h2>
+    <button id="menu-dashboard" class="active">📊 Dashboard</button>
+    <button id="menu-manage-users">👥 Manage Users</button>
+    <button id="logout-btn">🚪 Logout</button>
+  </div>
 
-    <section class="portal-welcome">
-      <h1>Welcome, Admin 👩‍🏫</h1>
-      <p>Your central hub for managing users, requests, sessions, and platform content.</p>
-    </section>
-  </main>
+  <!-- Main content container (JS will render Dashboard / Manage Users here) -->
+  <div class="portal-main" id="main-content">
+    <!-- JS will render Dashboard / Manage Users here -->
+  </div>
 
+  <!-- Footer -->
   <footer>
     © 2025 University of Johannesburg | Admin Assistance Portal | Powered by EduProAssist
   </footer>
@@ -100,5 +95,6 @@
   <script src="admin-portal.js"></script>
 </body>
 </html>
+
 
 
