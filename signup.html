@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Signup - LearnBridge</title>
+  <link rel="stylesheet" href="style.css">
+
+  <style>
+    .popup {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #ff4b4b;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 6px;
+      display: none;
+      font-weight: bold;
+      z-index: 9999;
+    }
+    .popup.success {
+      background: #28a745;
+    }
+  </style>
+</head>
+
+<body class="login-page" style="background-image: url('assets/banners/uj-bg.jpg');">
+
+  <!-- Popup -->
+  <div id="popup" class="popup"></div>
+
+  <img src="assets/logos/uj.png" alt="UJ Logo" class="top-left-logo">
+
+  <div class="login-box">
+    <h2>Sign Up to LearnBridge 🎓</h2>
+
+    <input type="text" id="fullName" placeholder="Full Name"><br>
+    <input type="email" id="email" placeholder="Email (must end with @uj.ac.za)"><br>
+    <input type="password" id="password" placeholder="Password (8 chars, number, _)"><br>
+
+    <select id="role">
+      <option value="student">Student</option>
+      <option value="tutor">Tutor</option>
+      <option value="counsellor">Counsellor</option>
+    </select><br>
+
+    <input type="text" id="department" placeholder="Department (optional)"><br>
+
+    <button onclick="signup()">Sign Up</button>
+
+    <p>Already have an account? <a href="index.html">Login here</a></p>
+
+    <p class="footer">© 2025 University of Johannesburg | LearnBridge</p>
+  </div>
+
+  <script>
+    function showPopup(message, success = false) {
+      const popup = document.getElementById("popup");
+      popup.textContent = message;
+      popup.className = success ? "popup success" : "popup";
+      popup.style.display = "block";
+      setTimeout(() => popup.style.display = "none", 3000);
+    }
+
+    function signup() {
+      const fullName = document.getElementById("fullName").value.trim();
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+      const role = document.getElementById("role").value;
+      const department = document.getElementById("department").value.trim();
+
+      // VALIDATION
+      if (!email.endsWith("@uj.ac.za")) {
+        showPopup("Email must end with @uj.ac.za");
+        return;
+      }
+
+      if (password.length < 8 || !/\d/.test(password) || !password.includes("_")) {
+        showPopup("Password must be 8+ chars, include a number and _ underscore.");
+        return;
+      }
+
+      // STORE USER
+      let users = JSON.parse(localStorage.getItem("learnbridge_users") || "[]");
+
+      if (users.some(u => u.email === email)) {
+        showPopup("Email already registered!");
+        return;
+      }
+
+      users.push({ fullName, email, password, role, department });
+      localStorage.setItem("learnbridge_users", JSON.stringify(users));
+
+      showPopup("Account created! Redirecting...", true);
+
+      setTimeout(() => window.location.href = "index.html", 1500);
+    }
+  </script>
+
+</body>
+</html>
