@@ -168,7 +168,7 @@
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
           <div>
             <div style="font-size:1.1rem;font-weight:700">Dashboard</div>
-            <div class="small-muted">Snapshot of portal health</div>
+            <div class="small-muted">Summary of platform usage and performance</div>
           </div>
           <div class="flex">
             <button id="openManageBtn" class="btn primary">Go to Manage Users ➜</button>
