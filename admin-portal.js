@@ -201,6 +201,7 @@
           </div>
         </div>
       </div>
+       ` ;
 
 
     // card click -> open Manage Users with tab and filter
