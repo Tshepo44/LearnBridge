@@ -202,18 +202,6 @@
         </div>
       </div>
 
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <div style="font-weight:700">Quick actions</div>
-          <div class="muted">Click a card to drill into Manage Users</div>
-        </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <button id="createUserBtn" class="btn primary">➕ Create User</button>
-          <button id="exportBtn" class="btn ghost">📤 Export Users (JSON)</button>
-          <button id="clearAllBtn" class="btn" style="background:#fff;border:1px solid #ddd">🧹 Clear All (dev only)</button>
-        </div>
-      </div>
-    `;
 
     // card click -> open Manage Users with tab and filter
     $$('.card[data-target]').forEach(c=>{
