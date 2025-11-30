@@ -104,7 +104,7 @@
 
         <main class="content" id="mainContent">
           <div class="topbar">
-            <div><strong>Admin Portal</strong> <span class="muted">— Manage users & portal health</span></div>
+            <div><strong>Admin Portal</strong> <span class="muted">—Manage Users, Activity & System Status</span></div>
             <div class="mini">
               <div class="tag">${UNI_KEY.toUpperCase()}</div>
               <div class="tag" id="timeTag">${new Date().toLocaleString()}</div>
