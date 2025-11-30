@@ -116,8 +116,8 @@
       </div>
     `;
 
-    // Update time every 30s
-    setInterval(()=>{ const el = document.getElementById('timeTag'); if(el) el.textContent = new Date().toLocaleString(); },30000);
+    // Update time every 1 second (live clock)
+    setInterval(()=>{ const el = document.getElementById('timeTag'); if(el) el.textContent = new Date().toLocaleString(); },1000);
   }
 
   /* ---------- Rendering Views ---------- */
