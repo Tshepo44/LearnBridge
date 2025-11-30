@@ -80,9 +80,6 @@
           <img src="assets/logos/uj.png" alt="logo" style="height:56px;border-radius:8px;background:#fff;padding:6px" onerror="this.style.display='none'"/>
           <div style="color:#fff;font-weight:700;font-size:1.2rem">University of Johannesburg — Admin Portal</div>
         </div>
-        <div>
-          <button id="logoutBtnTop" class="btn ghost">🔒 Logout</button>
-        </div>
       </div>
 
       <div class="admin-dashboard" id="adminDashboardRoot">
