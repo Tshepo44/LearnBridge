@@ -266,6 +266,7 @@
           </div>
           <div style="display:flex;gap:8px">
             <button id="refreshBtn" class="btn">🔄 Refresh</button>
+            <button id="downloadBtn" class="btn primary">⬇️ Download</button>
           </div>
         </div>
 
@@ -290,6 +291,46 @@
     $('#searchInput').addEventListener('input', ()=>drawManageBody(getActiveTab()));
     $('#filterRole').addEventListener('change', ()=>drawManageBody(getActiveTab()));
     $('#filterStatus').addEventListener('change', ()=>drawManageBody(getActiveTab()));
+
+     $('#downloadBtn').addEventListener('click', () => {
+  const container = document.getElementById('manageBody');
+  if (!container) return;
+
+  const table = container.querySelector('table');
+  if (!table) { 
+    alert('No table data to download'); 
+    return; 
+  }
+
+  // Wrap the table in a minimal HTML document
+  const htmlDoc = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Exported Table</title>
+      <style>
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #333; padding: 6px 8px; text-align: left; }
+        th { background-color: #eee; }
+      </style>
+    </head>
+    <body>
+      ${table.outerHTML}
+    </body>
+    </html>
+  `;
+
+  // Create a downloadable file
+  const blob = new Blob([htmlDoc], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `learnbridge_${getActiveTab()}.html`; // filename based on current tab
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
 
     // start with requested tab
     setTimeout(()=> {
