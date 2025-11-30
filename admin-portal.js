@@ -3,6 +3,8 @@
    - Replaces page content with dashboard UI
    - Persists to localStorage (keys: 'learnbridge_users', 'learnbridge_audit')
    - Logout -> 'login.html' or reload
+   - Improved: dashboard summary info box, clear "no users" states,
+     robust event handlers, and Manage Users explanatory block.
 */
 
 (() => {
@@ -70,6 +72,7 @@
         .modal-back{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:9999}
         .modal{background:#fff;padding:18px;border-radius:12px;max-width:720px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.25)}
         .row{display:flex;gap:10px}
+        .info-box{padding:12px;border-radius:10px;background:#fbfbfb;border:1px solid #eee}
         @media(max-width:900px){ .admin-dashboard{flex-direction:column} .side{width:100%;order:2} .content{order:1} .cards{flex-direction:column} }
       </style>
     `);
@@ -111,13 +114,40 @@
             </div>
           </div>
 
-          <div id="viewContainer"></div>
+          <div style="display:grid;grid-template-columns:1fr 320px;gap:12px;align-items:start">
+            <div id="viewContainer"></div>
+
+            <!-- Right-side small info box requested -->
+            <div>
+              <div class="card info-box" id="rightInfoBox">
+                <div style="font-weight:700;margin-bottom:6px">1️⃣ Dashboard — Summary</div>
+                <div class="small-muted" style="margin-bottom:8px">High-level snapshot of portal health. Click any card to drill into Manage Users.</div>
+                <ul style="padding-left:18px;margin:0 0 8px 0">
+                  <li>Total students, tutors, counsellors</li>
+                  <li>New registrations (today / week)</li>
+                  <li>Suspended accounts</li>
+                  <li>Quick stats (most active users)</li>
+                </ul>
+                <div style="display:flex;gap:8px">
+                  <button id="goToManageQuick" class="btn primary">Go to Manage Users</button>
+                  <button id="refreshQuick" class="btn">🔄 Refresh</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </main>
       </div>
     `;
 
     // Update time every 30s
     setInterval(()=>{ const el = document.getElementById('timeTag'); if(el) el.textContent = new Date().toLocaleString(); },30000);
+
+    // quick handlers
+    setTimeout(()=>{
+      const go = document.getElementById('goToManageQuick'); if(go) go.addEventListener('click', ()=>{ showView('manage-users',{tab:'all'}); $$('.nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.view==='manage-users')); });
+      const ref = document.getElementById('refreshQuick'); if(ref) ref.addEventListener('click', ()=>{ render(); });
+    },50);
   }
 
   /* ---------- Rendering Views ---------- */
@@ -143,7 +173,7 @@
     const container = $('#viewContainer');
     if(!container) return;
     if(view === 'dashboard') renderDashboard();
-    else if(view === 'manage-users') renderManageUsers(opts && opts.tab ? opts.tab : 'all');
+    else if(view === 'manage-users') renderManageUsers(opts && opts.tab ? opts.tab : 'all', opts.filter || {});
     else container.innerHTML = `<div class="card"><h3>Coming Soon</h3><p class="muted">Reports & settings will be added later.</p></div>`;
   }
 
@@ -220,8 +250,8 @@
       c.addEventListener('click', () => {
         const t = c.dataset.target;
         // map to tabs: students -> students, tutors -> tutors, counsellors -> counsellors, suspended -> all (with suspended filter)
-        if(t === 'suspended') showView('manage-users', {tab:'all', q:'', filter:{suspended:true}});
-        else showView('manage-users', {tab:'all', q:'', filter:{role:t.slice(0,-1) || t}}); // crude mapping
+        if(t === 'suspended') showView('manage-users', {tab:'all', filter:{suspended:true}});
+        else showView('manage-users', {tab:'all', filter:{role:t}});
         // activate sidebar manage-users
         $$('.nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.view==='manage-users'));
       });
@@ -251,7 +281,7 @@
   }
 
   /* ---------- MANAGE USERS ---------- */
-  function renderManageUsers(initialTab = 'all', extra = {}) {
+  function renderManageUsers(initialTab = 'all', prefilter = {}) {
     const users = loadUsers();
     const audit = loadAudit();
 
@@ -297,6 +327,18 @@
 
         <div id="manageBody"></div>
       </div>
+
+      <!-- Explanatory block required: LearnBridge Admin: Manage Users -->
+      <div class="card">
+        <div style="font-weight:700;margin-bottom:8px">LearnBridge Admin: “Manage Users” — Full Explanation</div>
+        <div class="small-muted" style="margin-bottom:8px">This is the central hub for all user management. Below are the core features & how actions work.</div>
+        <div style="display:flex;gap:12px;flex-direction:column">
+          <div><strong>Core features:</strong> View/Edit/Suspend/Delete users; Approve/Deny new registrations; Audit trail; Activity logs.</div>
+          <div><strong>Tabs:</strong> All Users / New Registrations / Activity Logs — switch without leaving the page.</div>
+          <div><strong>Search & Filters:</strong> Search by name/email/role; filter by status and role.</div>
+          <div><strong>Storage:</strong> All changes are saved to localStorage under the key <code>learnbridge_users</code> and audit events under <code>learnbridge_audit</code>.</div>
+        </div>
+      </div>
     `;
 
     // Tabs handlers
@@ -321,7 +363,7 @@
     setTimeout(()=> {
       const tab = initialTab === 'new' ? 'new' : (initialTab === 'activity' ? 'activity' : 'all');
       $$('#manageTabs .tab').forEach(x=>x.classList.toggle('active', x.dataset.tab===tab));
-      drawManageBody(tab, extra.filter || {});
+      drawManageBody(tab, prefilter);
     }, 0);
 
     /* ---------- Helper: active tab ---------- */
@@ -331,13 +373,14 @@
     function drawManageBody(tab, prefilter = {}) {
       const users = loadUsers();
       const audit = loadAudit();
-      const q = $('#searchInput').value.trim().toLowerCase();
-      const roleFilter = $('#filterRole').value || '';
-      const statusFilter = $('#filterStatus').value || '';
+      const qEl = $('#searchInput');
+      const q = qEl ? qEl.value.trim().toLowerCase() : '';
+      const roleFilter = $('#filterRole') ? $('#filterRole').value || '' : '';
+      const statusFilter = $('#filterStatus') ? $('#filterStatus').value || '' : '';
 
       if(tab === 'activity'){
         const rows = audit.map(a=>`<tr>
-          <td>${formatDate(a.time)}</td><td>${a.by}</td><td>${a.action}</td><td class="muted">${a.details||''}</td>
+          <td>${formatDate(a.time)}</td><td>${a.by}</td><td>${escapeHtml(a.action)}</td><td class="muted">${escapeHtml(a.details||'')}</td>
         </tr>`).join('') || `<tr><td colspan="4" class="empty">No activity recorded yet.</td></tr>`;
         $('#manageBody').innerHTML = `<table><thead><tr><th>Time</th><th>By</th><th>Action</th><th>Details</th></tr></thead><tbody>${rows}</tbody></table>`;
         return;
@@ -397,11 +440,13 @@
 
       $('#manageBody').innerHTML = `<table><thead><tr><th>Name</th><th>Role</th><th>Email</th><th>Department</th><th>Created</th><th>Status</th><th>Actions</th></tr></thead><tbody>${rows}</tbody></table>`;
 
-      // attach actions
+      // attach actions using event delegation where possible
       $$('#manageBody button').forEach(btn => btn.addEventListener('click', (ev) => {
-        const tr = ev.target.closest('tr');
-        const id = tr.dataset.id;
-        const action = btn.dataset.action;
+        const btnEl = ev.currentTarget;
+        const tr = btnEl.closest('tr');
+        const id = tr && tr.dataset ? tr.dataset.id : null;
+        const action = btnEl.dataset.action;
+        if(!id) return alert('User not found');
         if(action === 'view') openUserModal('view', id);
         if(action === 'edit') openUserModal('edit', id);
         if(action === 'suspend') handleSuspend(id);
@@ -569,11 +614,12 @@
   }
 
   /* ---------- Helpers ---------- */
-  function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+  function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>\"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
 
   /* ---------- INIT ---------- */
   buildUI();
   render();
 
 })();
+
 
