@@ -133,7 +133,7 @@
       });
     });
    
-    $('#logoutBtnTop').addEventListener('click', logout);
+   
   }
 
   function showView(view, opts = {}){
