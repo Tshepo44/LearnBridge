@@ -1,70 +1,45 @@
-// admin-portal.js
-// LearnBridge Admin Portal JS
-// Features: Dashboard, Manage Users, Local Storage Persistence, Logout, Modals, Stats
-
 // ======== Local Storage Setup ========
 const STORAGE_KEY = "learnbridge_admin_users";
-
-// Initialize users data if not present
 let users = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
 
-// Example admin credentials
-const ADMIN_CREDENTIALS = { email: "admin@gmail.com", password: "admin123" };
-
 // ======== DOM Elements ========
-const dashboardCard = document.getElementById("dashboard-card");
 const mainContent = document.getElementById("main-content");
 const logoutBtn = document.getElementById("logout-btn");
 const manageUsersBtn = document.getElementById("menu-manage-users");
+const dashboardBtn = document.getElementById("menu-dashboard");
 
 // ======== Utility Functions ========
-
-// Save users to local storage
 function saveUsers() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
 }
 
-// Generate Dashboard Summary HTML
+// ======== Dashboard ========
 function renderDashboard() {
   const totalStudents = users.filter(u => u.role === "student").length;
   const totalTutors = users.filter(u => u.role === "tutor").length;
   const totalCounsellors = users.filter(u => u.role === "counsellor").length;
   const suspendedUsers = users.filter(u => u.suspended).length;
-  const newThisWeek = 0; // For simplicity, can add date check
 
   mainContent.innerHTML = `
     <h1>📊 Admin Dashboard</h1>
     <div class="dashboard-cards">
-      <div class="card" id="card-students">
-        👩‍🎓 Students<br>
-        ${totalStudents} Active, ${newThisWeek} New This Week
-      </div>
-      <div class="card" id="card-tutors">
-        👨‍🏫 Tutors<br>
-        ${totalTutors} Active, ${newThisWeek} New This Week
-      </div>
-      <div class="card" id="card-counsellors">
-        🧑‍⚕️ Counsellors<br>
-        ${totalCounsellors} Active, ${newThisWeek} New This Week
-      </div>
-      <div class="card" id="card-suspended">
-        ⛔ Suspended Users<br>
-        ${suspendedUsers}
-      </div>
+      <div class="card">👩‍🎓 Students<br>${totalStudents}</div>
+      <div class="card">👨‍🏫 Tutors<br>${totalTutors}</div>
+      <div class="card">🧑‍⚕️ Counsellors<br>${totalCounsellors}</div>
+      <div class="card">⛔ Suspended<br>${suspendedUsers}</div>
     </div>
-    <p style="margin-top:20px;">Click on any card to manage users 👇</p>
+    <p style="margin-top:20px;">Click any card to open Manage Users</p>
   `;
 
-  // Add click event to all cards to go to Manage Users
   document.querySelectorAll(".card").forEach(card => {
-    card.addEventListener("click", () => {
+    card.onclick = () => {
       loadManageUsers();
       highlightMenu("menu-manage-users");
-    });
+    };
   });
 }
 
-// ======== Manage Users Page ========
+// ======== Manage Users ========
 function loadManageUsers() {
   mainContent.innerHTML = `
     <h1>👥 Manage Users</h1>
@@ -73,48 +48,44 @@ function loadManageUsers() {
       <button class="tab-btn" data-tab="new">New Registrations</button>
       <button class="tab-btn" data-tab="activity">Activity Logs</button>
     </div>
-    <div id="tab-content">
-      <!-- Users table goes here -->
-    </div>
+    <div id="tab-content"></div>
   `;
   setupTabs();
   renderAllUsersTab();
 }
 
-// Setup tabs functionality
 function setupTabs() {
   const tabs = document.querySelectorAll(".tab-btn");
+
   tabs.forEach(tab => {
-    tab.addEventListener("click", () => {
+    tab.onclick = () => {
       tabs.forEach(t => t.classList.remove("active"));
       tab.classList.add("active");
-      const selectedTab = tab.dataset.tab;
-      if (selectedTab === "all") renderAllUsersTab();
-      else if (selectedTab === "new") renderNewUsersTab();
-      else if (selectedTab === "activity") renderActivityTab();
-    });
+      const t = tab.dataset.tab;
+
+      if (t === "all") renderAllUsersTab();
+      else if (t === "new") renderNewUsersTab();
+      else renderActivityTab();
+    };
   });
 }
 
-// Render All Users Tab
+// ======== Tabs ========
 function renderAllUsersTab() {
   const container = document.getElementById("tab-content");
-  if (users.length === 0) {
-    container.innerHTML = `<p>ℹ️ There are no users at the moment.</p>`;
-    return;
-  }
+  if (users.length === 0) return container.innerHTML = "<p>No users found.</p>";
 
-  let html = `<table class="users-table">
-    <thead>
-      <tr>
-        <th>Name</th><th>Role</th><th>Email</th><th>Department</th>
-        <th>Created</th><th>Avg Logins/Week</th><th>Last Active</th><th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
+  let html = `
+    <table class="users-table">
+      <thead>
+        <tr>
+          <th>Name</th><th>Role</th><th>Email</th><th>Department</th>
+          <th>Created</th><th>Logins/Week</th><th>Last Active</th><th>Actions</th>
+        </tr>
+      </thead><tbody>
   `;
 
-  users.forEach((u, index) => {
+  users.forEach((u, i) => {
     html += `
       <tr>
         <td>${u.name}</td>
@@ -125,37 +96,32 @@ function renderAllUsersTab() {
         <td>${u.avgLogins || 0}</td>
         <td>${u.lastActive || "N/A"}</td>
         <td>
-          <button onclick="viewUser(${index})">View</button>
-          <button onclick="toggleSuspend(${index})">${u.suspended ? "Reinstate" : "Suspend"}</button>
-          <button onclick="deleteUser(${index})">Delete</button>
+          <button onclick="viewUser(${i})">View</button>
+          <button onclick="toggleSuspend(${i})">${u.suspended ? "Reinstate" : "Suspend"}</button>
+          <button onclick="deleteUser(${i})">Delete</button>
         </td>
       </tr>
     `;
   });
 
-  html += "</tbody></table>";
-  container.innerHTML = html;
+  container.innerHTML = html + "</tbody></table>";
 }
 
-// Render New Users Tab
 function renderNewUsersTab() {
   const container = document.getElementById("tab-content");
-  const newUsers = users.filter(u => u.new || false);
-  if (newUsers.length === 0) {
-    container.innerHTML = `<p>ℹ️ There are no new users at the moment.</p>`;
-    return;
-  }
+  const list = users.filter(u => u.new);
 
-  let html = `<table class="users-table">
-    <thead>
-      <tr>
-        <th>Name</th><th>Role</th><th>Email</th><th>Status</th><th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
+  if (list.length === 0) return container.innerHTML = "<p>No new users.</p>";
+
+  let html = `
+    <table class="users-table">
+      <thead>
+        <tr><th>Name</th><th>Role</th><th>Email</th><th>Status</th><th>Actions</th></tr>
+      </thead><tbody>
   `;
 
-  newUsers.forEach((u, index) => {
+  list.forEach(u => {
+    const index = users.indexOf(u); // FIX: real index
     html += `
       <tr>
         <td>${u.name}</td>
@@ -170,25 +136,18 @@ function renderNewUsersTab() {
     `;
   });
 
-  html += "</tbody></table>";
-  container.innerHTML = html;
+  container.innerHTML = html + "</tbody></table>";
 }
 
-// Render Activity Tab
 function renderActivityTab() {
   const container = document.getElementById("tab-content");
-  if (users.length === 0) {
-    container.innerHTML = `<p>ℹ️ No user activity yet.</p>`;
-    return;
-  }
+  if (users.length === 0) return container.innerHTML = "<p>No activity yet.</p>";
 
-  let html = `<table class="users-table">
-    <thead>
-      <tr>
-        <th>Name</th><th>Role</th><th>Last Login</th><th>Sessions Requested</th><th>Videos Watched</th>
-      </tr>
-    </thead>
-    <tbody>
+  let html = `
+    <table class="users-table">
+      <thead>
+        <tr><th>Name</th><th>Role</th><th>Last Login</th><th>Sessions</th><th>Videos</th></tr>
+      </thead><tbody>
   `;
 
   users.forEach(u => {
@@ -203,74 +162,52 @@ function renderActivityTab() {
     `;
   });
 
-  html += "</tbody></table>";
-  container.innerHTML = html;
+  container.innerHTML = html + "</tbody></table>";
 }
 
 // ======== User Actions ========
-function viewUser(index) {
-  const u = users[index];
-  alert(`👤 User Info\nName: ${u.name}\nRole: ${u.role}\nEmail: ${u.email}\nDepartment: ${u.department || "-"}\nSuspended: ${u.suspended ? "Yes" : "No"}`);
-}
+function viewUser(i) { alert(JSON.stringify(users[i], null, 2)); }
 
-function toggleSuspend(index) {
-  const u = users[index];
-  u.suspended = !u.suspended;
+function toggleSuspend(i) {
+  users[i].suspended = !users[i].suspended;
   saveUsers();
   renderAllUsersTab();
-  alert(u.suspended ? `⛔ User suspended` : `✅ User reinstated`);
 }
 
-function deleteUser(index) {
-  if (confirm("⚠️ Are you sure you want to permanently delete this user?")) {
-    users.splice(index, 1);
-    saveUsers();
-    renderAllUsersTab();
-    alert("🗑️ User deleted successfully");
-  }
+function deleteUser(i) {
+  if (!confirm("Delete user?")) return;
+  users.splice(i, 1);
+  saveUsers();
+  renderAllUsersTab();
 }
 
-function approveUser(index) {
-  users[index].verified = true;
-  users[index].new = false;
+function approveUser(i) {
+  users[i].verified = true;
+  users[i].new = false;
   saveUsers();
   renderNewUsersTab();
-  alert("✅ User approved");
 }
 
-function denyUser(index) {
-  users.splice(index, 1);
+function denyUser(i) {
+  users.splice(i, 1);
   saveUsers();
   renderNewUsersTab();
-  alert("❌ User denied and removed");
 }
 
 // ======== Helpers ========
-function capitalize(str) {
-  return str.charAt(0).toUpperCase() + str.slice(1);
-}
+function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
-// Highlight menu
+// ======== Menu Highlight ========
 function highlightMenu(id) {
-  document.querySelectorAll(".sidebar button").forEach(btn => btn.classList.remove("active"));
+  document.querySelectorAll(".sidebar button").forEach(b => b.classList.remove("active"));
   document.getElementById(id).classList.add("active");
 }
 
-// ======== Logout ========
-logoutBtn.addEventListener("click", () => {
-  window.location.href = "uj.html"; // redirect to login page
-});
-
-// ======== Sidebar Buttons ========
-dashboardCard.addEventListener("click", () => {
-  renderDashboard();
-  highlightMenu("menu-dashboard");
-});
-
-manageUsersBtn.addEventListener("click", () => {
-  loadManageUsers();
-  highlightMenu("menu-manage-users");
-});
+// ======== Sidebar Clicks ========
+dashboardBtn.onclick = () => { renderDashboard(); highlightMenu("menu-dashboard"); };
+manageUsersBtn.onclick = () => { loadManageUsers(); highlightMenu("menu-manage-users"); };
 
 // ======== Initial Load ========
 renderDashboard();
+
+
