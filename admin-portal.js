@@ -292,7 +292,7 @@
     $('#filterRole').addEventListener('change', ()=>drawManageBody(getActiveTab()));
     $('#filterStatus').addEventListener('change', ()=>drawManageBody(getActiveTab()));
 
-     $('#downloadBtn').addEventListener('click', () => {
+ $('#downloadBtn').addEventListener('click', () => {
   const container = document.getElementById('manageBody');
   if (!container) return;
 
@@ -302,7 +302,27 @@
     return; 
   }
 
-  // Wrap the table in a minimal HTML document
+  // Clone table and remove the Actions column
+  const clone = table.cloneNode(true);
+  const ths = clone.querySelectorAll('th');
+  let actionColIndex = -1;
+
+  // Find Actions column
+  ths.forEach((th, idx) => {
+    if (th.textContent.trim().toLowerCase() === 'actions') actionColIndex = idx;
+  });
+
+  if (actionColIndex !== -1) {
+    // Remove <th> from header
+    ths[actionColIndex].remove();
+    // Remove corresponding <td> in each row
+    clone.querySelectorAll('tr').forEach(tr => {
+      const tds = tr.querySelectorAll('td');
+      if (tds[actionColIndex]) tds[actionColIndex].remove();
+    });
+  }
+
+  // Wrap in HTML document
   const htmlDoc = `
     <!DOCTYPE html>
     <html>
@@ -316,17 +336,16 @@
       </style>
     </head>
     <body>
-      ${table.outerHTML}
+      ${clone.outerHTML}
     </body>
     </html>
   `;
 
-  // Create a downloadable file
   const blob = new Blob([htmlDoc], { type: 'text/html' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `learnbridge_${getActiveTab()}.html`; // filename based on current tab
+  a.download = `learnbridge_${getActiveTab()}.html`;
   a.click();
   URL.revokeObjectURL(url);
 });
