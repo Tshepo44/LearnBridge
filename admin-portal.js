@@ -68,6 +68,21 @@
     saveDB(db);
   }
 
+   /* ---------- RATINGS STORAGE ---------- */
+
+function loadRatings(){
+  const db = loadDB();
+  db.ratings = db.ratings || [];
+  return db.ratings;
+}
+
+function saveRatings(list){
+  const db = loadDB();
+  db.ratings = list;
+  saveDB(db);
+}
+
+
   /* ---------- Utility ---------- */
   const $ = (sel, ctx = document) => ctx.querySelector(sel);
   const $$ = (sel, ctx = document) => Array.from(ctx.querySelectorAll(sel));
@@ -90,7 +105,8 @@
       sessions: {},
       tutorData: {},
       studentData: {},
-      counsellorData: {}
+      counsellorData: {},
+      ratings: []
     });
   }
 
@@ -207,6 +223,7 @@
     else if(view === 'manage-users') renderManageUsers(opts && opts.tab ? opts.tab : 'all');
     else if (view === 'tutoring-requests') showTutoringRequestsView();
     else if (view === 'counselling-requests') showCounsellingRequestsView();
+    else if (view === 'ratings') showRatingsView();
     else container.innerHTML = `<div class="card"><h3>Coming Soon</h3><p class="muted">Reports & settings will be added later.</p></div>`;
   }
 
@@ -262,6 +279,13 @@
             <div class="big">${counts.suspended}</div>
             <div class="small-muted">Review suspensions</div>
           </div>
+
+          <div class="card" style="min-width:180px;flex:1;cursor:pointer" data-target="ratings">
+          <div class="title">⭐ Ratings</div>
+          <div class="big">${loadRatings().length}</div>
+          <div class="small-muted">New student reviews</div>
+          </div>
+
         </div>
       </div>
        ` ;
@@ -1151,6 +1175,232 @@ function downloadCounsellingData(category, from, to){
 }
 
 /* ---------- END MODULE ---------- */
+
+
+ /* ============================================================
+   ⭐ RATINGS MODULE
+   Student → Tutor/Counsellor Ratings
+   ============================================================ */
+
+/* ---------- Init Ratings Module ---------- */
+
+function initRatingsModule(){
+
+  // ensure ratings array exists
+  const db = loadDB();
+  if (!db.ratings){
+    db.ratings = [];
+    saveDB(db);
+  }
+
+  // Add sidebar button
+  setTimeout(() => {
+    const nav = document.querySelector('.side .nav');
+    if (!nav) return;
+
+    if (!nav.querySelector('[data-view="ratings"]')) {
+      const btn = document.createElement('button');
+      btn.className = 'nav-btn';
+      btn.dataset.view = 'ratings';
+      btn.textContent = '⭐ Ratings';
+      nav.appendChild(btn);
+      renderSidebarHandlers();
+    }
+
+    // dashboard rating box
+    renderRatingsSmallBox();
+  }, 150);
+}
+
+/* ---------- Dashboard Small Box ---------- */
+
+function renderRatingsSmallBox(){
+  const container = document.querySelector('#viewContainer');
+  if(!container) return;
+
+  const cards = container.querySelector('.cards');
+  if(!cards) return;
+
+  const old = cards.querySelector('.ratings-small-box');
+  if(old) old.remove();
+
+  const data = loadRatings();
+
+  const card = document.createElement('div');
+  card.className = 'card ratings-small-box';
+  card.style.minWidth = "200px";
+  card.style.cursor = "pointer";
+
+  card.innerHTML = `
+    <div class="title">⭐ Ratings</div>
+    <div class="big">${data.length}</div>
+    <div class="small-muted">${data.length===0 ? 'No ratings yet' : 'Student reviews'}</div>
+  `;
+
+  card.onclick = () => {
+    $$('.nav-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.view==='ratings')
+    );
+    showView('ratings');
+  };
+
+  cards.appendChild(card);
+}
+
+/* ---------- Ratings Page ---------- */
+
+function showRatingsView(){
+  const c = document.querySelector('#viewContainer');
+  if(!c) return;
+
+  c.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div>
+        <div style="font-size:1.2rem;font-weight:700">⭐ Ratings</div>
+        <div class="small-muted">Student reviews for tutors & counsellors</div>
+      </div>
+
+      <button id="backRR" class="btn ghost">← Dashboard</button>
+    </div>
+
+    <div class="card">
+
+      <div style="display:flex;gap:10px;margin-bottom:10px">
+        <input id="rateSearch" placeholder="Search by name / module…" style="flex:1">
+        <select id="rateFilterRole">
+          <option value="">All</option>
+          <option value="tutor">Tutor</option>
+          <option value="counsellor">Counsellor</option>
+        </select>
+        <button id="rateSort" class="btn">⬇ Sort by Stars</button>
+        <button id="rateDownload" class="btn primary">⬇ Download</button>
+      </div>
+
+      <div id="ratingsBody"></div>
+    </div>
+  `;
+
+  $('#backRR').onclick = () => showView('dashboard');
+
+  $('#rateSearch').oninput = () => renderRatingsTable();
+  $('#rateFilterRole').onchange = () => renderRatingsTable();
+  $('#rateSort').onclick = () => renderRatingsTable(true);
+
+  $('#rateDownload').onclick = () => showRatingsDownloadModal();
+
+  renderRatingsTable();
+}
+
+/* ---------- Render Ratings Table ---------- */
+
+function renderRatingsTable(sort=false){
+  const body = $('#ratingsBody');
+  let list = loadRatings().slice();
+
+  const search = ($('#rateSearch').value || "").toLowerCase();
+  const roleF = $('#rateFilterRole').value;
+
+  if(search){
+    list = list.filter(x =>
+      [x.studentName,x.ratedName,x.module,x.comment].join(" ").toLowerCase().includes(search)
+    );
+  }
+
+  if(roleF){
+    list = list.filter(x => x.role === roleF);
+  }
+
+  if(sort){
+    list.sort((a,b)=>b.stars - a.stars);
+  }
+
+  if(list.length===0){
+    body.innerHTML = `<div class="empty" style="padding:20px;text-align:center;">No ratings available.</div>`;
+    return;
+  }
+
+  body.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Student</th>
+          <th>Rated Person</th>
+          <th>Module</th>
+          <th>Stars</th>
+          <th>Comment</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${list.map(r=>`
+          <tr>
+            <td>${r.studentName}<br><small>${r.studentNumber}</small></td>
+            <td>${r.ratedName}<br><small>${r.role}</small></td>
+            <td>${r.module}</td>
+            <td>${"⭐".repeat(r.stars)}</td>
+            <td>${escapeHtml(r.comment)}</td>
+            <td>${formatDate(r.date)}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+/* ---------- Download Ratings Modal ---------- */
+
+function showRatingsDownloadModal(){
+  const m = document.createElement('div');
+  m.className = "modal-back";
+
+  m.innerHTML = `
+    <div class="modal">
+      <h3>Select Date Range</h3>
+      <label>From:</label>
+      <input id="rateFrom" type="date">
+      <label>To:</label>
+      <input id="rateTo" type="date">
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:10px">
+        <button class="btn" id="cancelR">Cancel</button>
+        <button class="btn primary" id="confirmDownloadR">Download</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(m);
+
+  $('#cancelR').onclick = () => m.remove();
+  $('#confirmDownloadR').onclick = () => {
+    downloadRatings();
+    m.remove();
+  };
+}
+
+/* ---------- Download Ratings CSV ---------- */
+
+function downloadRatings(){
+  let list = loadRatings();
+
+  const f = $('#rateFrom').value;
+  const t = $('#rateTo').value;
+
+  if(f) list = list.filter(x => new Date(x.date) >= new Date(f));
+  if(t) list = list.filter(x => new Date(x.date) <= new Date(t));
+
+  let csv = "Student,Student Number,Rated Person,Role,Module,Stars,Comment,Date\n";
+
+  list.forEach(r => {
+    csv += `"${r.studentName}","${r.studentNumber}","${r.ratedName}","${r.role}","${r.module}",${r.stars},"${r.comment}","${r.date}"\n`;
+  });
+
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+
+  a.href = url;
+  a.download = "ratings.csv";
+  a.click();
+}
 
 
    
