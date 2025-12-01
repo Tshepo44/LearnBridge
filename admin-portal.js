@@ -761,6 +761,7 @@ function showCounsellingRequestsView(){
           <option value="in-person">In person</option>
         </select>
         <button id="counRefresh" class="btn">🔄</button>
+        <button id="counDownload" class="btn">⬇️ Download</button>
       </div>
 
       <div id="counBody" style="margin-top:10px"></div>
@@ -769,6 +770,7 @@ function showCounsellingRequestsView(){
 
   $('#backDashX').onclick = () => showView('dashboard');
   $('#counRefresh').onclick = () => drawCounTab(getActiveTab());
+  $('#counDownload').onclick = () => openCounDownloadPopup();
   $('#counSearch').oninput = () => drawCounTab(getActiveTab());
 
   $$('#counTabs .tab').forEach(t =>
@@ -927,6 +929,115 @@ function addCounsellingRequest(obj){
   saveCounselling(list);
   recordAudit("Added counselling request","admin","id:"+item.id);
   renderCounsellingSmallBox();
+}
+
+
+function openCounDownloadPopup(){
+  const m = document.createElement('div');
+  m.className = "modal-back";
+
+  m.innerHTML = `
+    <div class="modal" style="max-width:380px">
+      <div style="display:flex;justify-content:space-between;">
+        <div style="font-weight:700;font-size:1.1rem">Download Counselling Data</div>
+        <button class="btn" id="closeDL">✖</button>
+      </div>
+
+      <div style="margin-top:15px">
+        <label><b>Select category:</b></label>
+        <select id="dlCategory" style="width:100%;margin-top:5px">
+          <option value="pending">Pending</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+          <option value="upcoming">Upcoming</option>
+          <option value="followup">Follow-up</option>
+          <option value="updated">Updated</option>
+          <option value="all">All</option>
+        </select>
+      </div>
+
+      <div style="margin-top:15px">
+        <label><b>Date range:</b></label>
+        <input id="dlFrom" type="datetime-local" style="width:100%;margin-top:5px">
+        <input id="dlTo" type="datetime-local" style="width:100%;margin-top:5px">
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px">
+        <button class="btn warn" id="dlCancel">Cancel</button>
+        <button class="btn primary" id="dlStart">Download</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(m);
+
+  $('#closeDL').onclick = () => m.remove();
+  $('#dlCancel').onclick = () => m.remove();
+
+  $('#dlStart').onclick = () => {
+    const cat = $('#dlCategory').value;
+    const from = $('#dlFrom').value;
+    const to = $('#dlTo').value;
+    downloadCounsellingData(cat, from, to);
+    m.remove();
+  };
+}
+
+function downloadCounsellingData(category, from, to){
+  let list = loadCounselling();
+
+  // filter by category
+  if(category !== "all"){
+    if(category === "pending") list = list.filter(x=>x.status==="pending");
+    if(category === "completed") list = list.filter(x=>x.status==="completed");
+    if(category === "cancelled") list = list.filter(x=>x.status==="cancelled" || x.status==="no-show");
+    if(category === "upcoming") list = list.filter(x=>new Date(x.datetime)>new Date());
+    if(category === "followup") list = list.filter(x=>x.followUp===true);
+    if(category === "updated") list = list.filter(x=>x.updated===true);
+  }
+
+  // filter by date
+  if(from){
+    const f = new Date(from);
+    list = list.filter(x=>new Date(x.datetime) >= f);
+  }
+  if(to){
+    const t = new Date(to);
+    list = list.filter(x=>new Date(x.datetime) <= t);
+  }
+
+  if(list.length === 0){
+    alert("No data available for chosen filters.");
+    return;
+  }
+
+  // Convert to CSV
+  let csv = "Created,Session Date,Student Name,Student Number,Counsellor Name,Counsellor Email,Module,Type,Venue,Status,Comment\n";
+
+  list.forEach(x=>{
+    csv += [
+      formatDate(x.createdAt),
+      formatDate(x.datetime),
+      x.studentName,
+      x.studentNumber,
+      x.counsellorName,
+      x.counsellorEmail,
+      x.module,
+      x.sessionType,
+      x.venue || "",
+      x.status,
+      (x.comment || "").replace(/\n/g," ")
+    ].map(v=>`"${v}"`).join(",") + "\n";
+  });
+
+  // Download
+  const blob = new Blob([csv], {type:"text/csv"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `counselling_${category}_${Date.now()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 /* ---------- END MODULE ---------- */
