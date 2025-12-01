@@ -70,19 +70,7 @@
     saveDB(db);
   }
 
-   /* ---------- RATINGS STORAGE ---------- */
 
-function loadRatings(){
-  const db = loadDB();
-  db.ratings = db.ratings || [];
-  return db.ratings;
-}
-
-function saveRatings(list){
-  const db = loadDB();
-  db.ratings = list;
-  saveDB(db);
-}
 
 
   /* ---------- Utility ---------- */
@@ -225,7 +213,6 @@ function saveRatings(list){
     else if(view === 'manage-users') renderManageUsers(opts && opts.tab ? opts.tab : 'all');
     else if (view === 'tutoring-requests') showTutoringRequestsView();
     else if (view === 'counselling-requests') showCounsellingRequestsView();
-    else if (view === 'ratings') showRatingsView();
     else container.innerHTML = `<div class="card"><h3>Coming Soon</h3><p class="muted">Reports & settings will be added later.</p></div>`;
   }
 
@@ -281,13 +268,6 @@ function saveRatings(list){
             <div class="big">${counts.suspended}</div>
             <div class="small-muted">Review suspensions</div>
           </div>
-
-          <div class="card" style="min-width:180px;flex:1;cursor:pointer" data-target="ratings">
-          <div class="title">⭐ Ratings</div>
-          <div class="big">${loadRatings().length}</div>
-          <div class="small-muted">New student reviews</div>
-          </div>
-
         </div>
       </div>
        ` ;
