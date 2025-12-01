@@ -441,6 +441,7 @@ function showTutoringRequestsView(){
           <option value="in-person">In person</option>
         </select>
         <button id="tutRefresh" class="btn">🔄</button>
+        <button id="tutDownload" class="btn">⬇️ Download</button>
       </div>
 
       <div id="tutBody" style="margin-top:10px"></div>
@@ -449,6 +450,7 @@ function showTutoringRequestsView(){
 
   $('#backDashX').onclick = () => showView('dashboard');
   $('#tutRefresh').onclick = () => drawTutTab(getActiveTab());
+  $('#tutDownload').onclick = () => openTutDownloadPopup();
   $('#tutSearch').oninput = () => drawTutTab(getActiveTab());
 
   $$('#tutTabs .tab').forEach(t =>
@@ -607,6 +609,114 @@ function addTutoringRequest(obj){
   saveTutoring(list);
   recordAudit("Added tutoring request","admin","id:"+item.id);
   renderTutoringSmallBox();
+}
+
+function openTutDownloadPopup(){
+  const m = document.createElement('div');
+  m.className = "modal-back";
+
+  m.innerHTML = `
+    <div class="modal" style="max-width:380px">
+      <div style="display:flex;justify-content:space-between;">
+        <div style="font-weight:700;font-size:1.1rem">Download Tutoring Data</div>
+        <button class="btn" id="closeTutDL">✖</button>
+      </div>
+
+      <div style="margin-top:15px">
+        <label><b>Select category:</b></label>
+        <select id="tutDlCategory" style="width:100%;margin-top:5px">
+          <option value="pending">Pending</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+          <option value="upcoming">Upcoming</option>
+          <option value="followup">Follow-up</option>
+          <option value="updated">Updated</option>
+          <option value="all">All</option>
+        </select>
+      </div>
+
+      <div style="margin-top:15px">
+        <label><b>Date range:</b></label>
+        <input id="tutDlFrom" type="datetime-local" style="width:100%;margin-top:5px">
+        <input id="tutDlTo" type="datetime-local" style="width:100%;margin-top:5px">
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px">
+        <button class="btn warn" id="tutDlCancel">Cancel</button>
+        <button class="btn primary" id="tutDlStart">Download</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(m);
+
+  $('#closeTutDL').onclick = () => m.remove();
+  $('#tutDlCancel').onclick = () => m.remove();
+
+  $('#tutDlStart').onclick = () => {
+    const cat = $('#tutDlCategory').value;
+    const from = $('#tutDlFrom').value;
+    const to = $('#tutDlTo').value;
+    downloadTutoringData(cat, from, to);
+    m.remove();
+  };
+}
+
+function downloadTutoringData(category, from, to){
+  let list = loadTutoring();
+
+  // filter by category
+  if(category !== "all"){
+    if(category === "pending") list = list.filter(x=>x.status==="pending");
+    if(category === "completed") list = list.filter(x=>x.status==="completed");
+    if(category === "cancelled") list = list.filter(x=>x.status==="cancelled" || x.status==="no-show");
+    if(category === "upcoming") list = list.filter(x=>new Date(x.datetime)>new Date());
+    if(category === "followup") list = list.filter(x=>x.followUp===true);
+    if(category === "updated") list = list.filter(x=>x.updated===true);
+  }
+
+  // filter by date range
+  if(from){
+    const f = new Date(from);
+    list = list.filter(x=>new Date(x.datetime) >= f);
+  }
+  if(to){
+    const t = new Date(to);
+    list = list.filter(x=>new Date(x.datetime) <= t);
+  }
+
+  if(list.length === 0){
+    alert("No tutoring data available for chosen filters.");
+    return;
+  }
+
+  // Convert to CSV
+  let csv = "Created,Session Date,Student Name,Student Number,Tutor Name,Tutor Email,Module,Type,Venue,Status,Comment\n";
+
+  list.forEach(x=>{
+    csv += [
+      formatDate(x.createdAt),
+      formatDate(x.datetime),
+      x.studentName,
+      x.studentNumber,
+      x.tutorName,
+      x.tutorEmail,
+      x.module,
+      x.sessionType,
+      x.venue || "",
+      x.status,
+      (x.comment || "").replace(/\n/g," ")
+    ].map(v=>`"${v}"`).join(",") + "\n";
+  });
+
+  // Download
+  const blob = new Blob([csv], {type:"text/csv"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `tutoring_${category}_${Date.now()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 /* ---------- END MODULE ---------- */
