@@ -213,6 +213,7 @@
     else if(view === 'manage-users') renderManageUsers(opts && opts.tab ? opts.tab : 'all');
     else if (view === 'tutoring-requests') showTutoringRequestsView();
     else if (view === 'counselling-requests') showCounsellingRequestsView();
+    else if (view === 'ratings') showRatingsView();
     else container.innerHTML = `<div class="card"><h3>Coming Soon</h3><p class="muted">Reports & settings will be added later.</p></div>`;
   }
 
@@ -267,6 +268,12 @@
             <div class="title">⛔ Suspended</div>
             <div class="big">${counts.suspended}</div>
             <div class="small-muted">Review suspensions</div>
+          </div>
+          
+          <div class="card" style="min-width:180px;flex:1;cursor:pointer" data-target="ratings">
+          <div class="title">⭐ Ratings</div>
+          <div class="big">${loadRatings().length}</div>
+          <div class="small-muted">Student reviews</div>
           </div>
         </div>
       </div>
@@ -1784,6 +1791,11 @@ function downloadRatings(){
   initTutoringModule();
   initCounsellingModule();
   initRatingsModule();
+function addRating(obj){
+  const list = loadRatings();
+  list.unshift(obj);
+  saveRatings(list);
+}
 
 
    
