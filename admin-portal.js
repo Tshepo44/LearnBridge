@@ -284,6 +284,9 @@
       $$('.nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.view==='manage-users'));
     });
 
+  renderTutoringSmallBox();
+  renderCounsellingSmallBox();
+
 
   }
 
