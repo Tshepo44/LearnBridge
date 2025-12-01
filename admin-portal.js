@@ -1,33 +1,97 @@
 /* admin-portal.js
-   Full Admin Dashboard + Manage Users (single-file)
-   - Replaces page content with dashboard UI
-   - Persists to localStorage (keys: 'learnbridge_users', 'learnbridge_audit')
-   - Logout -> 'login.html' or reload
+   Admin Dashboard with Unified LearnBridge Storage
+   SINGLE STORAGE KEY: 'learnbridge_data'
+   Structure:
+   {
+     users: [],
+     audit: [],
+     sessions: {},
+     tutorData: {},
+     studentData: {},
+     counsellorData: {},
+   }
 */
 
 (() => {
-  /* ---------- Config & Storage Keys ---------- */
-  const STORAGE_USERS = 'learnbridge_users';
-  const STORAGE_AUDIT = 'learnbridge_audit';
-  const UNI_KEY = 'uj'; // keep a consistent prefix if you want per-uni later
-  const THEME_COLOR = '#ff7a00'; // UJ orange - can be dynamic later
+
+  /* ---------- Unified Storage ---------- */
+  const STORAGE_KEY = 'learnbridge_data';
+  const THEME_COLOR = '#ff7a00';
+  const UNI_KEY = 'uj';
+
+  function loadDB() {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || `{
+      "users":[],
+      "audit":[],
+      "sessions":{},
+      "tutorData":{},
+      "studentData":{},
+      "counsellorData":{}
+    }`);
+  }
+
+  function saveDB(db) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+  }
+
+  /* Users */
+  function loadUsers(){
+    return loadDB().users || [];
+  }
+
+  function saveUsers(users){
+    const db = loadDB();
+    db.users = users;
+    saveDB(db);
+  }
+
+  /* Audit */
+  function loadAudit(){
+    return loadDB().audit || [];
+  }
+
+  function saveAudit(a){
+    const db = loadDB();
+    db.audit = a;
+    saveDB(db);
+  }
+
+  function recordAudit(action, by='admin', details=''){
+    const db = loadDB();
+    db.audit.unshift({
+      id: uid(),
+      action,
+      by,
+      details,
+      time: now()
+    });
+    saveDB(db);
+  }
 
   /* ---------- Utility ---------- */
   const $ = (sel, ctx = document) => ctx.querySelector(sel);
   const $$ = (sel, ctx = document) => Array.from(ctx.querySelectorAll(sel));
-  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+  const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,8);
   const now = () => new Date().toISOString();
   const formatDate = (iso) => iso ? new Date(iso).toLocaleString() : '—';
-  function saveUsers(users){ localStorage.setItem(STORAGE_USERS, JSON.stringify(users)); }
-  function loadUsers(){ return JSON.parse(localStorage.getItem(STORAGE_USERS) || '[]'); }
-  function saveAudit(a){ localStorage.setItem(STORAGE_AUDIT, JSON.stringify(a)); }
-  function loadAudit(){ return JSON.parse(localStorage.getItem(STORAGE_AUDIT) || '[]'); }
-  function recordAudit(action, by='admin', details=''){ const a = loadAudit(); a.unshift({id:uid(), action, by, details, time: now()}); saveAudit(a); }
 
-  /* ---------- Initial Data (if none) ---------- */
-  if(!localStorage.getItem(STORAGE_USERS)){
-    saveUsers([]); // start empty as user requested
-    saveAudit([]);
+  function escapeHtml(s){
+    if(!s) return '';
+    return String(s).replace(/[&<>"']/g, c=>({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+  }
+
+  /* ---------- Initialize Single DB if empty ---------- */
+  if(!localStorage.getItem(STORAGE_KEY)){
+    saveDB({
+      users: [],
+      audit: [],
+      sessions: {},
+      tutorData: {},
+      studentData: {},
+      counsellorData: {}
+    });
   }
 
   /* ---------- Replace Page with Dashboard UI ---------- */
