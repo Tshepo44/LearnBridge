@@ -26,7 +26,8 @@
       "sessions":{},
       "tutorData":{},
       "studentData":{},
-      "counsellorData":{}
+      "counsellorData":{},
+      "ratings":[]
     }`);
   }
 
