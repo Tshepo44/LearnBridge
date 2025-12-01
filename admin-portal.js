@@ -206,6 +206,7 @@
     if(view === 'dashboard') renderDashboard();
     else if(view === 'manage-users') renderManageUsers(opts && opts.tab ? opts.tab : 'all');
     else if (view === 'tutoring-requests') showTutoringRequestsView();
+    else if (view === 'counselling-requests') showCounsellingRequestsView();
     else container.innerHTML = `<div class="card"><h3>Coming Soon</h3><p class="muted">Reports & settings will be added later.</p></div>`;
   }
 
@@ -607,6 +608,325 @@ function addTutoringRequest(obj){
 
 /* ---------- END MODULE ---------- */
 
+/* ---------- COUNSELLING REQUESTS MODULE (EMPTY / CLEAN VERSION) ---------- */
+/*
+   Works with unified storage "learnbridge_data"
+   NO SAMPLE DATA — starts 100% empty
+*/
+
+/* ---------- Counselling Storage ---------- */
+
+function loadCounselling(){
+  const db = loadDB();
+  db.counsellingRequests = db.counsellingRequests || [];
+  return db.counsellingRequests;
+}
+
+function saveCounselling(list){
+  const db = loadDB();
+  db.counsellingRequests = list;
+  saveDB(db);
+}
+
+/* ---------- Initialize Counselling Module ---------- */
+
+function initCounsellingModule(){
+
+  // ensure counsellingRequests array exists (empty)
+  const db = loadDB();
+  if (!db.counsellingRequests) {
+    db.counsellingRequests = [];
+    saveDB(db);
+  }
+
+  // Add sidebar button once UI loads
+  setTimeout(() => {
+    const nav = document.querySelector('.side .nav');
+    if (!nav) return;
+
+    if (!nav.querySelector('[data-view="counselling-requests"]')) {
+      const btn = document.createElement('button');
+      btn.className = 'nav-btn';
+      btn.dataset.view = 'counselling-requests';
+      btn.textContent = '🧑‍⚕️ Counselling Requests';
+      nav.appendChild(btn);
+      renderSidebarHandlers();
+    }
+
+    // Show empty counselling box in dashboard
+    renderCounsellingSmallBox();
+  }, 150);
+}
+
+/* ---------- Small Dashboard Box ---------- */
+
+function renderCounsellingSmallBox(){
+  const container = document.querySelector('#viewContainer');
+  if(!container) return;
+
+  const cards = container.querySelector('.cards');
+  if(!cards) return;
+
+  const old = cards.querySelector('.counselling-small-box');
+  if(old) old.remove();
+
+  const data = loadCounselling();
+
+  const counts = {
+    pending: data.filter(x=>x.status==='pending').length,
+    cancelled: data.filter(x=>x.status==='cancelled' || x.status==='no-show').length,
+    completed: data.filter(x=>x.status==='completed').length,
+    upcoming: data.filter(x=>new Date(x.datetime) > new Date()).length,
+    followUp: data.filter(x=>x.followUp).length,
+    updated: data.filter(x=>x.updated).length,
+  };
+
+  const card = document.createElement('div');
+  card.className = 'card counselling-small-box';
+  card.style.minWidth = "220px";
+  card.style.cursor = "pointer";
+
+  card.innerHTML = `
+    <div class="title">🧑‍⚕️ Counselling Requests</div>
+    <div style="margin-top:10px;font-size:0.9rem;">
+      <div><b>${counts.pending}</b> pending</div>
+      <div><b>${counts.cancelled}</b> cancelled / no-show</div>
+      <div><b>${counts.completed}</b> completed</div>
+      <div><b>${counts.upcoming}</b> upcoming</div>
+      <div><b>${counts.followUp}</b> follow-up</div>
+      <div><b>${counts.updated}</b> updated</div>
+    </div>
+    <div class="small-muted" style="margin-top:8px">Click to manage ➜</div>
+  `;
+
+  card.onclick = () => {
+    $$('.nav-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.view==='counselling-requests')
+    );
+    showView('counselling-requests');
+  };
+
+  cards.appendChild(card);
+}
+
+/* ---------- Compute Remaining Time ---------- */
+
+function computeRemaining(iso){
+  if(!iso) return "—";
+  const nowD = new Date();
+  const t = new Date(iso);
+  const diff = t - nowD;
+  if(diff <= 0) return "Now or past";
+  const d = Math.floor(diff / 86400000);
+  const h = Math.floor((diff % 86400000) / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  return `${d}d ${h}h ${m}m`;
+}
+
+/* ---------- Main Counselling View ---------- */
+
+function showCounsellingRequestsView(){
+  const c = document.querySelector('#viewContainer');
+  if(!c) return;
+
+  c.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div>
+        <div style="font-size:1.2rem;font-weight:700">Counselling Requests</div>
+        <div class="small-muted">Manage all counselling session requests</div>
+      </div>
+
+      <button id="backDashX" class="btn ghost">← Dashboard</button>
+    </div>
+
+    <div class="card">
+
+      <div class="tabs" id="counTabs">
+        <div class="tab active" data-tab="pending">🕒 Pending</div>
+        <div class="tab" data-tab="completed">✅ Completed</div>
+        <div class="tab" data-tab="cancelled">❌ Cancelled</div>
+        <div class="tab" data-tab="upcoming">📅 Upcoming</div>
+        <div class="tab" data-tab="followup">🔁 Follow-up</div>
+        <div class="tab" data-tab="updated">✏️ Updated</div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <input id="counSearch" placeholder="Search…" style="flex:1" />
+        <select id="counFilterType">
+          <option value="">All types</option>
+          <option value="online">Online</option>
+          <option value="in-person">In person</option>
+        </select>
+        <button id="counRefresh" class="btn">🔄</button>
+      </div>
+
+      <div id="counBody" style="margin-top:10px"></div>
+    </div>
+  `;
+
+  $('#backDashX').onclick = () => showView('dashboard');
+  $('#counRefresh').onclick = () => drawCounTab(getActiveTab());
+  $('#counSearch').oninput = () => drawCounTab(getActiveTab());
+
+  $$('#counTabs .tab').forEach(t =>
+    t.onclick = () => {
+      $$('#counTabs .tab').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      drawCounTab(t.dataset.tab);
+    }
+  );
+
+  drawCounTab("pending");
+
+  function getActiveTab(){
+    const t = $('#counTabs .tab.active');
+    return t ? t.dataset.tab : "pending";
+  }
+}
+
+/* ---------- Table Renderer ---------- */
+
+function drawCounTab(tab){
+  const body = document.querySelector('#counBody');
+  if(!body) return;
+
+  const search = ($('#counSearch')?.value || "").toLowerCase();
+  const typeF = $('#counFilterType')?.value || "";
+
+  let list = loadCounselling().slice();
+
+  // filters
+  if(typeF) list = list.filter(x=> (x.sessionType||"") === typeF);
+  if(search){
+    list = list.filter(x =>
+      [x.studentName,x.studentNumber,x.counsellorName,x.counsellorEmail,x.module,x.comment]
+      .join(" ").toLowerCase().includes(search)
+    );
+  }
+
+  // tab filter (list will be empty for now)
+  if(tab==="pending")   list = list.filter(x=>x.status==="pending");
+  if(tab==="completed") list = list.filter(x=>x.status==="completed");
+  if(tab==="cancelled") list = list.filter(x=>x.status==="cancelled" || x.status==="no-show");
+  if(tab==="upcoming")  list = list.filter(x=>new Date(x.datetime)>new Date());
+  if(tab==="followup")  list = list.filter(x=>x.followUp===true);
+  if(tab==="updated")   list = list.filter(x=>x.updated===true);
+
+  if(list.length===0){
+    body.innerHTML = `<div class="empty" style="padding:25px;text-align:center;">No ${tab} counselling requests.</div>`;
+    return;
+  }
+
+  // (same table rendering as before)
+  body.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Created</th><th>Session</th><th>Counsellor</th><th>Student</th>
+          <th>Module</th><th>Type</th><th>Comment</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${list.map(x=>`
+          <tr data-id="${x.id}">
+            <td>${formatDate(x.createdAt)}</td>
+            <td>${formatDate(x.datetime)}</td>
+            <td>${x.counsellorName}<br><small>${x.counsellorEmail}</small></td>
+            <td>${x.studentName}<br><small>${x.studentNumber}</small></td>
+            <td>${x.module}</td>
+            <td>${x.sessionType}${x.sessionType==='in-person' ? `<br><small>Venue: ${x.venue}</small>`:''}</td>
+            <td>${escapeHtml(x.comment||'')}</td>
+            <td>
+              <button class="btn" data-act="view">👁️</button>
+              <button class="btn" data-act="complete">✔️</button>
+              <button class="btn warn" data-act="delete">🗑️</button>
+            </td>
+          </tr>`).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+/* ---------- Modal Viewer (unchanged) ---------- */
+
+function showCounsellingModal(item){
+  const m = document.createElement('div');
+  m.className = "modal-back";
+  m.innerHTML = `
+    <div class="modal">
+      <div style="display:flex;justify-content:space-between;">
+        <div style="font-weight:700">Counselling Request</div>
+        <button class="btn" id="closeX">✖</button>
+      </div>
+      <div style="margin-top:10px">
+        <p><b>Student:</b> ${item.studentName} (${item.studentNumber})</p>
+        <p><b>Counsellor:</b> ${item.counsellorName} &lt;${item.counsellorEmail}&gt;</p>
+        <p><b>Module:</b> ${item.module}</p>
+        <p><b>Type:</b> ${item.sessionType} ${item.sessionType==='in-person' ? '• '+item.venue : ''}</p>
+        <p><b>Date/Time:</b> ${formatDate(item.datetime)}</p>
+        <p><b>Status:</b> ${item.status}</p>
+        <p><b>Comment:</b> ${escapeHtml(item.comment || '—')}</p>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px">
+        <button class="btn primary" id="markC">Mark Completed</button>
+        <button class="btn warn" id="markX">Mark Cancel</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(m);
+  $('#closeX').onclick = ()=> m.remove();
+
+  $('#markC').onclick = () => {
+    const all = loadCounselling();
+    const idx = all.findIndex(x=>x.id===item.id);
+    if(idx !== -1){
+      all[idx].status="completed";
+      all[idx].updated=true;
+      saveCounselling(all);
+      recordAudit("Completed counselling request","admin","id:"+item.id);
+    }
+    m.remove();
+    showCounsellingRequestsView();
+    renderCounsellingSmallBox();
+  };
+
+  $('#markX').onclick = () => {
+    const reason = prompt("Reason?") || "No reason";
+    const all = loadCounselling();
+    const idx = all.findIndex(x=>x.id===item.id);
+    if(idx !== -1){
+      all[idx].status="cancelled";
+      all[idx].comment = (all[idx].comment||"") + "\n" + "Cancel: " + reason;
+      all[idx].updated=true;
+      saveCounselling(all);
+      recordAudit("Cancelled counselling request","admin","id:"+item.id);
+    }
+    m.remove();
+    showCounsellingRequestsView();
+    renderCounsellingSmallBox();
+  };
+}
+
+/* ---------- Add Counselling Request (public) ---------- */
+
+function addCounsellingRequest(obj){
+  const list = loadCounselling();
+  const item = Object.assign({
+    id: uid(),
+    status:'pending',
+    createdAt: now(),
+    updated:false,
+    followUp:false
+  }, obj);
+  list.unshift(item);
+  saveCounselling(list);
+  recordAudit("Added counselling request","admin","id:"+item.id);
+  renderCounsellingSmallBox();
+}
+
+/* ---------- END MODULE ---------- */
 
 
    
@@ -1006,6 +1326,7 @@ function addTutoringRequest(obj){
   buildUI();
   render();
   initTutoringModule();
+  initCounsellingModule();
 
 
    
