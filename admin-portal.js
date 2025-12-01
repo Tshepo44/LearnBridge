@@ -1404,7 +1404,7 @@ function downloadRatings(){
   a.click();
 }
 
-
+/* ---------- END MODULE ---------- */
    
   /* ---------- MANAGE USERS ---------- */
   function renderManageUsers(initialTab = 'all', extra = {}) {
