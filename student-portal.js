@@ -46,28 +46,108 @@
   function buildUI() {
     document.head.insertAdjacentHTML('beforeend', `
       <style>
-        :root{--theme:${THEME_COLOR};--panel:#fff;--muted:#666;--radius:12px;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial}
-        body{margin:0;background:#f5f5f5;color:#222;display:flex;flex-direction:column;min-height:100vh;}
-        *{box-sizing:border-box;}
-        .dashboard-container{display:flex;flex:1;min-height:calc(100vh - 20px);margin:10px;}
-        aside{width:220px;background:var(--theme);color:#fff;padding:10px;display:flex;flex-direction:column;}
-        aside h2{text-align:center;margin-bottom:12px;font-size:1.1rem;}
-        .nav button{background:none;border:none;color:#fff;text-align:left;padding:8px 10px;margin:2px 0;cursor:pointer;border-radius:6px;}
-        .nav button.active, .nav button:hover{background:rgba(255,255,255,.2);}
-        main{flex:1;padding:12px;overflow:auto;}
-        .card{background:var(--panel);border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,.08);padding:12px;margin-bottom:12px;}
-        .small-muted{font-size:13px;color:var(--muted);}
-        .cards{display:flex;gap:10px;flex-wrap:wrap;}
-        .btn{padding:6px 10px;border-radius:6px;border:none;cursor:pointer;}
-        .btn.primary{background:var(--theme);color:#fff;}
-        .btn.ghost{background:#fff;border:1px solid #ccc;color:#333;}
-        .flex{display:flex;gap:6px;align-items:center;}
-        .empty{padding:25px;text-align:center;color:var(--muted);border:2px dashed #ccc;border-radius:10px;}
-        input, select, textarea{padding:6px;border-radius:6px;border:1px solid #ccc;width:100%;}
-        .modal-back{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:999;}
-        .modal{background:#fff;padding:18px;border-radius:12px;max-width:480px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.25);}
-        .row{display:flex;gap:10px;margin-bottom:10px;}
-        .row > *{flex:1;}
+:root{--theme:#0077ff;--panel:#fff;--muted:#666;--radius:12px;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial}
+body{margin:0;background:#f5f5f5;color:#222;display:flex;min-height:100vh;}
+*{box-sizing:border-box;}
+
+.dashboard-container{display:flex;flex:1;min-height:100vh;}
+
+aside{
+  width:240px;
+  background:var(--theme);
+  color:#fff;
+  padding:20px 10px;
+  display:flex;
+  flex-direction:column;
+}
+aside h2{text-align:center;margin-bottom:20px;font-size:1.2rem;}
+.nav button{
+  background:none;
+  border:none;
+  color:#fff;
+  text-align:left;
+  padding:10px 14px;
+  margin:4px 0;
+  cursor:pointer;
+  border-radius:6px;
+  font-size:14px;
+}
+.nav button.active, .nav button:hover{background:rgba(255,255,255,.2);}
+
+main{
+  flex:1;
+  padding:20px;
+  overflow:auto;
+  display:flex;
+  flex-direction:column;
+  gap:15px;
+  background:#f5f5f5;
+}
+
+.card{
+  background:var(--panel);
+  border-radius:var(--radius);
+  box-shadow:0 2px 12px rgba(0,0,0,.08);
+  padding:15px;
+  margin-bottom:12px;
+}
+
+.small-muted{font-size:13px;color:var(--muted);}
+
+.cards{
+  display:flex;
+  gap:15px;
+  flex-wrap:wrap;
+}
+
+.btn{
+  padding:6px 12px;
+  border-radius:6px;
+  border:none;
+  cursor:pointer;
+}
+.btn.primary{background:var(--theme);color:#fff;}
+.btn.ghost{background:#fff;border:1px solid #ccc;color:#333;}
+
+.flex{display:flex;gap:8px;align-items:center;}
+.empty{padding:25px;text-align:center;color:var(--muted);border:2px dashed #ccc;border-radius:10px;}
+
+input, select, textarea{
+  padding:6px;
+  border-radius:6px;
+  border:1px solid #ccc;
+  width:100%;
+}
+
+.modal-back{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.4);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:999;
+}
+
+.modal{
+  background:#fff;
+  padding:20px;
+  border-radius:var(--radius);
+  max-width:480px;
+  width:100%;
+  box-shadow:0 10px 40px rgba(0,0,0,.25);
+}
+
+.row{display:flex;gap:12px;margin-bottom:12px;}
+.row > *{flex:1;}
+
+/* Dashboard boxes like admin portal */
+#tutorBox, #counsellorBox{
+  flex:1;
+  min-width:200px;
+  cursor:pointer;
+}
+
       </style>
     `);
 
@@ -108,21 +188,22 @@
     const activeTutors = loadUsers().filter(u=>u.role==='tutor').length;
     const activeCounsellors = loadUsers().filter(u=>u.role==='counsellor').length;
 
-    main.innerHTML = `
-      <div class="cards">
-        <div class="card" id="tutorBox" style="cursor:pointer">
-          <div class="title">📚 Tutor Booking</div>
-          <div class="small-muted">Click to make a request</div>
-          <div style="margin-top:6px;"><b>${activeTutors}</b> active tutors</div>
-        </div>
+main.innerHTML = `
+  <div class="cards">
+    <div class="card" id="tutorBox">
+      <div class="title">📚 Tutor Booking</div>
+      <div class="small-muted">Click to make a request</div>
+      <div style="margin-top:6px;"><b>${activeTutors}</b> active tutors</div>
+    </div>
 
-        <div class="card" id="counsellorBox" style="cursor:pointer">
-          <div class="title">💬 Counsellor Booking</div>
-          <div class="small-muted">Click to make a request</div>
-          <div style="margin-top:6px;"><b>${activeCounsellors}</b> active counsellors</div>
-        </div>
-      </div>
-    `;
+    <div class="card" id="counsellorBox">
+      <div class="title">💬 Counsellor Booking</div>
+      <div class="small-muted">Click to make a request</div>
+      <div style="margin-top:6px;"><b>${activeCounsellors}</b> active counsellors</div>
+    </div>
+  </div>
+`;
+
 
     $('#tutorBox').onclick = () => {
       $$('.nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.view==='tutor-booking'));
