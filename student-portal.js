@@ -27,8 +27,7 @@
       "tutorData":{},
       "studentData":{},
       "counsellorData":{},
-      "tutoringRequests":[],
-      "currentStudent":{"id":"stu123","name":"Student User"}
+      "tutoringRequests":[]
     }`);
   }
   function saveDB(db) { localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); }
@@ -37,6 +36,14 @@
   function recordAudit(action, by='student', details=''){ 
     const db = loadDB();
     db.audit.unshift({id:uid(), action, by, details, time:now()});
+    saveDB(db);
+  }
+
+  /* ---------- Login Simulation ---------- */
+  // Call this after your login form submits
+  function loginStudent(studentId, studentName){
+    const db = loadDB();
+    db.currentStudent = { id: studentId, name: studentName };
     saveDB(db);
   }
 
@@ -53,7 +60,9 @@
             <button class="nav-btn active" data-view="dashboard" style="padding:12px;border:none;background:rgba(255,255,255,0.05);color:#fff;text-align:left;border-radius:8px;cursor:pointer;font-weight:600;">🏠 Dashboard</button>
             <button class="nav-btn" data-view="tutor-booking" style="padding:12px;border:none;background:transparent;color:#fff;text-align:left;border-radius:8px;cursor:pointer;font-weight:600;">📚 Tutor Booking</button>
           </div>
-          <div style="padding:12px;color:rgba(255,255,255,.85);text-align:center;margin-top:30px;font-size:0.9rem;">Student • UJ</div>
+          <div style="padding:12px;color:rgba(255,255,255,.85);text-align:center;margin-top:30px;font-size:0.9rem;">
+            ${getCurrentStudent()?.name || 'Student'} • UJ
+          </div>
         </aside>
 
         <main class="content" style="flex:1;min-height:400px;overflow:auto;">
@@ -64,6 +73,11 @@
 
     renderSidebarHandlers();
     showView('dashboard');
+  }
+
+  /* ---------- Current Student ---------- */
+  function getCurrentStudent() {
+    return loadDB().currentStudent || null;
   }
 
   /* ---------- Sidebar Handlers ---------- */
@@ -163,6 +177,7 @@
 
   /* ---------- Booking Modal ---------- */
   function openBookingModal(tutor) {
+    const student = getCurrentStudent() || { id:'unknown', name:'Student' };
     const m = document.createElement('div');
     m.className="modal-back";
     m.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:9999;";
@@ -174,7 +189,7 @@
         </div>
         <div style="display:flex;flex-direction:column;gap:10px;">
           <label>Name</label>
-          <input type="text" value="${tutor.name}" disabled style="padding:8px;border-radius:6px;border:1px solid #ccc;"/>
+          <input type="text" value="${student.name}" disabled style="padding:8px;border-radius:6px;border:1px solid #ccc;"/>
           <label>Department</label>
           <input type="text" value="${tutor.department}" disabled style="padding:8px;border-radius:6px;border:1px solid #ccc;"/>
           <label>Module</label>
@@ -210,8 +225,8 @@
         tutorName:tutor.name,
         tutorDepartment:tutor.department,
         module:tutor.module,
-        studentName:db.currentStudent?.name || 'Student',
-        studentId:db.currentStudent?.id || 'unknown',
+        studentName: student.name,
+        studentId: student.id,
         datetime:date,
         comment:topic
       });
@@ -225,6 +240,9 @@
 
   /* ---------- Initialize ---------- */
   buildUI();
+
+  // EXAMPLE: simulate login (replace with your actual login inputs)
+  // loginStudent('stu567','Karabo'); 
 
 })();
 
