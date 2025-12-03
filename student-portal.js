@@ -1,11 +1,23 @@
 /* student-portal.js
-   Student Portal with Unified LearnBridge Storage
+   Student Dashboard with Unified LearnBridge Storage
    SINGLE STORAGE KEY: 'learnbridge_data'
+   Structure:
+   {
+     users: [],
+     audit: [],
+     sessions: {},
+     tutorData: {},
+     studentData: {},
+     counsellorData: {},
+     tutoringRequests: [],
+     counsellingRequests: []
+   }
 */
 
 (() => {
+
   const STORAGE_KEY = 'learnbridge_data';
-  const THEME_COLOR = '#0077ff';
+  const THEME_COLOR = '#007aff'; // blue for student
   const UNI_KEY = 'uj';
 
   /* ---------- Utility ---------- */
@@ -13,394 +25,376 @@
   const $$ = (sel, ctx = document) => Array.from(ctx.querySelectorAll(sel));
   const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,8);
   const now = () => new Date().toISOString();
-  const formatDate = iso => iso ? new Date(iso).toLocaleString() : '—';
-  const escapeHtml = s => s ? String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) : '';
+  const formatDate = (iso) => iso ? new Date(iso).toLocaleString() : '—';
+  function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-  /* ---------- Load/Save DB ---------- */
+  /* ---------- LocalStorage DB ---------- */
   function loadDB() {
     return JSON.parse(localStorage.getItem(STORAGE_KEY) || `{
       "users":[],
+      "audit":[],
       "sessions":{},
-      "studentData":{},
       "tutorData":{},
-      "counsellorData":{}
+      "studentData":{},
+      "counsellorData":{},
+      "tutoringRequests":[],
+      "counsellingRequests":[]
     }`);
   }
+
   function saveDB(db) { localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); }
 
-  function loadUsers() { return loadDB().users || []; }
-  function saveUsers(users) { const db = loadDB(); db.users = users; saveDB(db); }
+  /* ---------- Audit ---------- */
+  function recordAudit(action, by='student', details='') {
+    const db = loadDB();
+    db.audit.unshift({id: uid(), action, by, details, time: now()});
+    saveDB(db);
+  }
 
-  /* ---------- Initialize DB if empty ---------- */
+  /* ---------- Initialize DB ---------- */
   if(!localStorage.getItem(STORAGE_KEY)){
     saveDB({
       users: [],
+      audit: [],
       sessions: {},
-      studentData: { tutoringRequests: [], counsellingRequests: [] },
       tutorData: {},
-      counsellorData: {}
+      studentData: {},
+      counsellorData: {},
+      tutoringRequests: [],
+      counsellingRequests: []
     });
   }
 
   /* ---------- Build UI ---------- */
-  function buildUI() {
+  function buildUI(){
     document.head.insertAdjacentHTML('beforeend', `
       <style>
-:root{--theme:#0077ff;--panel:#fff;--muted:#666;--radius:12px;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial}
-body{margin:0;background:#f5f5f5;color:#222;display:flex;min-height:100vh;}
-*{box-sizing:border-box;}
-
-.dashboard-container{display:flex;flex:1;min-height:100vh;}
-
-aside{
-  width:240px;
-  background:var(--theme);
-  color:#fff;
-  padding:20px 10px;
-  display:flex;
-  flex-direction:column;
-}
-aside h2{text-align:center;margin-bottom:20px;font-size:1.2rem;}
-.nav button{
-  background:none;
-  border:none;
-  color:#fff;
-  text-align:left;
-  padding:10px 14px;
-  margin:4px 0;
-  cursor:pointer;
-  border-radius:6px;
-  font-size:14px;
-}
-.nav button.active, .nav button:hover{background:rgba(255,255,255,.2);}
-
-main{
-  flex:1;
-  padding:20px;
-  overflow:auto;
-  display:flex;
-  flex-direction:column;
-  gap:15px;
-  background:#f5f5f5;
-}
-
-.card{
-  background:var(--panel);
-  border-radius:var(--radius);
-  box-shadow:0 2px 12px rgba(0,0,0,.08);
-  padding:15px;
-  margin-bottom:12px;
-}
-
-.small-muted{font-size:13px;color:var(--muted);}
-
-.cards{
-  display:flex;
-  gap:15px;
-  flex-wrap:wrap;
-}
-
-.btn{
-  padding:6px 12px;
-  border-radius:6px;
-  border:none;
-  cursor:pointer;
-}
-.btn.primary{background:var(--theme);color:#fff;}
-.btn.ghost{background:#fff;border:1px solid #ccc;color:#333;}
-
-.flex{display:flex;gap:8px;align-items:center;}
-.empty{padding:25px;text-align:center;color:var(--muted);border:2px dashed #ccc;border-radius:10px;}
-
-input, select, textarea{
-  padding:6px;
-  border-radius:6px;
-  border:1px solid #ccc;
-  width:100%;
-}
-
-.modal-back{
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,.4);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  z-index:999;
-}
-
-.modal{
-  background:#fff;
-  padding:20px;
-  border-radius:var(--radius);
-  max-width:480px;
-  width:100%;
-  box-shadow:0 10px 40px rgba(0,0,0,.25);
-}
-
-.row{display:flex;gap:12px;margin-bottom:12px;}
-.row > *{flex:1;}
-
-/* Dashboard boxes like admin portal */
-#tutorBox, #counsellorBox{
-  flex:1;
-  min-width:200px;
-  cursor:pointer;
-}
-
+        :root{ --theme:${THEME_COLOR}; --panel:#fff; --muted:#666; --radius:12px; font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial;}
+        *{box-sizing:border-box}
+        body{margin:0;background:linear-gradient(135deg,#001,#061);color:#222;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:20px;}
+        .student-dashboard{width:100%;max-width:1200px;margin:12px auto;display:flex;border-radius:var(--radius);overflow:hidden;background:rgba(255,255,255,0.97);box-shadow:0 12px 35px rgba(0,0,0,.18);}
+        .side{width:260px;background:linear-gradient(180deg,var(--theme),#222);color:#fff;display:flex;flex-direction:column;justify-content:space-between;padding:12px 0}
+        .side h2{text-align:center;margin:0;padding:12px;font-size:1.05rem;border-bottom:1px solid rgba(255,255,255,.06)}
+        .nav{display:flex;flex-direction:column;padding:6px 0}
+        .nav button{background:none;border:none;color:#fff;padding:12px 18px;text-align:left;cursor:pointer;font-size:14px;border-top:1px solid rgba(255,255,255,.03)}
+        .nav button.active, .nav button:hover{background:rgba(255,255,255,0.06)}
+        .content{flex:1;padding:18px;overflow:auto;max-height:calc(100vh - 48px)}
+        .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+        .mini{display:flex;gap:10px;align-items:center}
+        .tag{padding:6px 10px;border-radius:8px;background:#f2f2f2;font-size:13px}
+        .card{background:var(--panel);border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.06);padding:14px;margin-bottom:14px}
+        .cards{display:flex;gap:12px;flex-wrap:wrap}
+        .card .title{font-weight:700;margin-bottom:6px}
+        .card .big{font-size:1.6rem;font-weight:800;color:var(--theme)}
+        .small-muted{font-size:13px;color:var(--muted)}
+        .search-row{display:flex;gap:10px;align-items:center;margin:8px 0}
+        input[type="text"], select {padding:8px;border-radius:8px;border:1px solid #ddd}
+        table{width:100%;border-collapse:collapse}
+        th,td{padding:8px;border-bottom:1px solid #eee;text-align:left;font-size:14px}
+        th.sortable{cursor:pointer}
+        .btn{padding:8px 10px;border-radius:8px;border:none;cursor:pointer}
+        .btn.primary{background:var(--theme);color:#fff}
+        .btn.ghost{background:transparent;border:1px solid #ddd}
+        .btn.warn{background:#ff4d4f;color:#fff}
+        .flex{display:flex;gap:8px;align-items:center}
+        .tabs{display:flex;gap:8px;margin-bottom:12px}
+        .tab{padding:8px 12px;border-radius:8px;background:#f5f5f5;cursor:pointer}
+        .tab.active{background:var(--theme);color:#fff}
+        .muted{color:var(--muted)}
+        .empty{padding:18px;border:2px dashed #eee;border-radius:10px;text-align:center;color:var(--muted)}
+        .modal-back{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:9999}
+        .modal{background:#fff;padding:18px;border-radius:12px;max-width:720px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.25)}
+        .row{display:flex;gap:10px}
+        @media(max-width:900px){ .student-dashboard{flex-direction:column} .side{width:100%;order:2} .content{order:1} .cards{flex-direction:column} }
       </style>
     `);
 
     document.body.innerHTML = `
-      <div class="dashboard-container">
-        <aside>
-          <h2>LearnBridge Student</h2>
-          <div class="nav">
-            <button class="nav-btn active" data-view="dashboard">🏠 Dashboard</button>
-            <button class="nav-btn" data-view="tutor-booking">📚 Tutor Booking</button>
-            <button class="nav-btn" data-view="counsellor-booking">💬 Counsellor Booking</button>
+      <div style="width:100%;max-width:1200px;display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <img src="assets/logos/uj.png" alt="logo" style="height:56px;border-radius:8px;background:#fff;padding:6px" onerror="this.style.display='none'"/>
+          <div style="color:#fff;font-weight:700;font-size:1.2rem">University of Johannesburg — Student Portal</div>
+        </div>
+      </div>
+
+      <div class="student-dashboard" id="studentDashboardRoot">
+        <aside class="side">
+          <div>
+            <h2>LearnBridge Student</h2>
+            <div class="nav" role="navigation">
+              <button class="nav-btn active" data-view="dashboard">🏠 Dashboard</button>
+              <button class="nav-btn" data-view="tutoring-requests">📚 Tutor Booking</button>
+              <button class="nav-btn" data-view="counselling-requests">💬 Counsellor Booking</button>
+            </div>
+          </div>
+          <div style="padding:12px;">
+            <div style="margin-bottom:8px;color:rgba(255,255,255,.85)">Student • UJ</div>
+            <button id="logoutBtn" class="btn" style="width:100%;background:transparent;border:1px solid rgba(255,255,255,.12);color:#fff">🔒 Logout</button>
           </div>
         </aside>
-        <main id="mainContent"></main>
+
+        <main class="content" id="mainContent">
+          <div class="topbar">
+            <div><strong>Student Portal</strong> <span class="muted">—Book Tutors or Counsellors</span></div>
+            <div class="mini">
+              <div class="tag">${UNI_KEY.toUpperCase()}</div>
+              <div class="tag" id="timeTag">${new Date().toLocaleString()}</div>
+            </div>
+          </div>
+
+          <div id="viewContainer"></div>
+        </main>
       </div>
     `;
+
+    setInterval(()=>{ const el = document.getElementById('timeTag'); if(el) el.textContent = new Date().toLocaleString(); },1000);
   }
 
   /* ---------- Render Views ---------- */
-  function render() {
-    $$('.nav-btn').forEach(btn => btn.addEventListener('click',()=>{
-      $$('.nav-btn').forEach(b=>b.classList.remove('active'));
-      btn.classList.add('active');
-      showView(btn.dataset.view);
-    }));
-    showView('dashboard');
+  function renderSidebarHandlers(){
+    $$('.nav-btn').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        $$('.nav-btn').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        showView(btn.dataset.view);
+      });
+    });
   }
 
-  function showView(view) {
-    if(view==='dashboard') return renderDashboard();
-    if(view==='tutor-booking') return renderTutorBooking();
-    if(view==='counsellor-booking') return renderCounsellorBooking();
+  function showView(view){
+    if(view==='dashboard') renderDashboard();
+    else if(view==='tutoring-requests') showTutoringRequestsView();
+    else if(view==='counselling-requests') showCounsellingRequestsView();
   }
 
   /* ---------- Dashboard ---------- */
-  function renderDashboard() {
-    const main = $('#mainContent');
-    const activeTutors = loadUsers().filter(u=>u.role==='tutor').length;
-    const activeCounsellors = loadUsers().filter(u=>u.role==='counsellor').length;
+  function renderDashboard(){
+    const db = loadDB();
+    const tutorsCount = Object.keys(db.tutorData || {}).length;
+    const counsellorsCount = Object.keys(db.counsellorData || {}).length;
 
-main.innerHTML = `
-  <div class="cards">
-    <div class="card" id="tutorBox">
-      <div class="title">📚 Tutor Booking</div>
-      <div class="small-muted">Click to make a request</div>
-      <div style="margin-top:6px;"><b>${activeTutors}</b> active tutors</div>
-    </div>
+    $('#viewContainer').innerHTML = `
+      <div class="cards">
+        <div class="card tutoring-small-box" style="min-width:220px;cursor:pointer">
+          <div class="title">📚 Tutor Booking</div>
+          <div style="margin-top:10px;font-size:0.9rem">
+            <div>Active Tutors: <b>${tutorsCount}</b></div>
+            <div class="small-muted" style="margin-top:6px">Click to make a request</div>
+          </div>
+        </div>
 
-    <div class="card" id="counsellorBox">
-      <div class="title">💬 Counsellor Booking</div>
-      <div class="small-muted">Click to make a request</div>
-      <div style="margin-top:6px;"><b>${activeCounsellors}</b> active counsellors</div>
-    </div>
-  </div>
-`;
+        <div class="card counselling-small-box" style="min-width:220px;cursor:pointer">
+          <div class="title">💬 Counsellor Booking</div>
+          <div style="margin-top:10px;font-size:0.9rem">
+            <div>Active Counsellors: <b>${counsellorsCount}</b></div>
+            <div class="small-muted" style="margin-top:6px">Click to make a request</div>
+          </div>
+        </div>
+      </div>
+    `;
 
-
-    $('#tutorBox').onclick = () => {
-      $$('.nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.view==='tutor-booking'));
-      showView('tutor-booking');
+    // click handlers
+    $('.tutoring-small-box').onclick = () => {
+      $$('.nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.view==='tutoring-requests'));
+      showView('tutoring-requests');
     };
-    $('#counsellorBox').onclick = () => {
-      $$('.nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.view==='counsellor-booking'));
-      showView('counsellor-booking');
+    $('.counselling-small-box').onclick = () => {
+      $$('.nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.view==='counselling-requests'));
+      showView('counselling-requests');
     };
   }
 
-  /* ---------- Tutor Booking ---------- */
-  function renderTutorBooking() {
-    const main = $('#mainContent');
-    const tutors = loadUsers().filter(u=>u.role==='tutor');
+  /* ---------- Tutoring Booking Module ---------- */
+  function loadTutoring(){ return loadDB().tutoringRequests || []; }
+  function saveTutoring(list){ const db=loadDB(); db.tutoringRequests=list; saveDB(db); }
+  function addTutoringRequest(obj){ const list=loadTutoring(); list.unshift(Object.assign({id:uid(), status:'pending', createdAt:now()},obj)); saveTutoring(list); recordAudit("Added tutoring request"); }
 
-    main.innerHTML = `
+  function showTutoringRequestsView(){
+    const db = loadDB();
+    $('#viewContainer').innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div>
+          <div style="font-size:1.2rem;font-weight:700">Tutor Booking</div>
+          <div class="small-muted">Search & request tutors</div>
+        </div>
+        <button class="btn ghost" id="backDashTut">← Dashboard</button>
+      </div>
+
       <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-          <div class="title">Tutor Booking</div>
-          <button class="btn ghost" id="backDash">← Dashboard</button>
+        <div class="search-row">
+          <input id="searchTutor" placeholder="Search by name, module, department" style="flex:1"/>
+          <button class="btn primary" id="refreshTut">Search</button>
         </div>
-
-        <div class="row">
-          <input id="searchTutor" placeholder="Search by name/module/department"/>
-          <button class="btn primary" id="searchBtn">Search</button>
-        </div>
-
         <div id="tutorList"></div>
       </div>
     `;
-
-    $('#backDash').onclick = ()=> showView('dashboard');
-    $('#searchBtn').onclick = drawTutorList;
-    drawTutorList();
-
-    function drawTutorList() {
-      const listDiv = $('#tutorList');
-      const q = ($('#searchTutor').value || '').toLowerCase();
-      let filtered = tutors.filter(t =>
-        t.name.toLowerCase().includes(q) ||
-        (t.module||'').toLowerCase().includes(q) ||
-        (t.department||'').toLowerCase().includes(q)
-      );
-
-      if(filtered.length===0){
-        listDiv.innerHTML = `<div class="empty">No tutors found.</div>`;
-        return;
-      }
-
-      listDiv.innerHTML = filtered.map(t=>`
-        <div class="card">
-          <div><b>${t.name}</b> (${t.department})</div>
-          <div class="small-muted">${t.module || 'No module assigned'}</div>
-          <button class="btn primary bookTutorBtn" data-id="${t.id}">Book</button>
-        </div>
-      `).join('');
-
-      $$('.bookTutorBtn').forEach(btn=>{
-        btn.onclick = ()=> openBookingModal('tutor', btn.dataset.id);
-      });
-    }
+    $('#backDashTut').onclick = ()=>showView('dashboard');
+    $('#refreshTut').onclick = drawTutors;
+    $('#searchTutor').oninput = drawTutors;
+    drawTutors();
   }
 
-  /* ---------- Counsellor Booking ---------- */
-  function renderCounsellorBooking() {
-    const main = $('#mainContent');
-    const counsellors = loadUsers().filter(u=>u.role==='counsellor');
-
-    main.innerHTML = `
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-          <div class="title">Counsellor Booking</div>
-          <button class="btn ghost" id="backDashC">← Dashboard</button>
-        </div>
-
-        <div class="row">
-          <input id="searchCounsellor" placeholder="Search by name/module/department"/>
-          <button class="btn primary" id="searchCounsellorBtn">Search</button>
-        </div>
-
-        <div id="counsellorList"></div>
-      </div>
-    `;
-
-    $('#backDashC').onclick = ()=> showView('dashboard');
-    $('#searchCounsellorBtn').onclick = drawCounsellorList;
-    drawCounsellorList();
-
-    function drawCounsellorList() {
-      const listDiv = $('#counsellorList');
-      const q = ($('#searchCounsellor').value || '').toLowerCase();
-      let filtered = counsellors.filter(c =>
-        c.name.toLowerCase().includes(q) ||
-        (c.module||'').toLowerCase().includes(q) ||
-        (c.department||'').toLowerCase().includes(q)
-      );
-
-      if(filtered.length===0){
-        listDiv.innerHTML = `<div class="empty">No counsellors found.</div>`;
-        return;
-      }
-
-      listDiv.innerHTML = filtered.map(c=>`
-        <div class="card">
-          <div><b>${c.name}</b> (${c.department})</div>
-          <div class="small-muted">${c.module || 'No module assigned'}</div>
-          <button class="btn primary bookCounsellorBtn" data-id="${c.id}">Book</button>
-        </div>
-      `).join('');
-
-      $$('.bookCounsellorBtn').forEach(btn=>{
-        btn.onclick = ()=> openBookingModal('counsellor', btn.dataset.id);
-      });
-    }
-  }
-
-  /* ---------- Booking Modal ---------- */
-  function openBookingModal(type, id) {
+  function drawTutors(){
+    const listContainer = $('#tutorList');
     const db = loadDB();
-    const users = loadUsers();
-    const mainUser = users.find(u=>u.id===id);
-    const studentName = 'Student Name'; // Replace with actual logged-in student if available
+    const search = ($('#searchTutor').value || '').toLowerCase();
+    const tutors = Object.values(db.tutorData || {}).filter(t=>{
+      return [t.name, t.module, t.department].join(' ').toLowerCase().includes(search);
+    });
 
+    if(tutors.length===0){
+      listContainer.innerHTML = `<div class="empty">No active tutors at the moment.</div>`;
+      return;
+    }
+
+    listContainer.innerHTML = tutors.map(t=>`
+      <div class="card">
+        <div><b>${t.name}</b> — ${t.department}</div>
+        <div>Module: ${t.module}</div>
+        <button class="btn primary" onclick="bookTutor('${t.id}')">Book</button>
+      </div>
+    `).join('');
+  }
+
+  window.bookTutor = function(tutorId){
+    const db = loadDB();
+    const t = db.tutorData[tutorId];
+    if(!t) return alert("Tutor not found.");
     const modal = document.createElement('div');
-    modal.className = 'modal-back';
+    modal.className='modal-back';
     modal.innerHTML = `
       <div class="modal">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <div class="title">Book ${type === 'tutor' ? 'Tutor' : 'Counsellor'}</div>
+        <div style="display:flex;justify-content:space-between;">
+          <div style="font-weight:700">Book Tutor</div>
           <button class="btn" id="closeModal">✖</button>
         </div>
-
-        <div class="row">
-          <input disabled value="${escapeHtml(mainUser.name)}" />
-          <input disabled value="${escapeHtml(mainUser.department || '')}" />
-        </div>
-        <div class="row">
-          <input disabled value="${escapeHtml(mainUser.module || '')}" />
-        </div>
-        <div class="row">
-          <input type="date" id="bookDate"/>
-          <input type="time" id="bookTime"/>
-        </div>
-        <div style="margin-top:10px;">
-          <textarea id="bookComment" placeholder="Brief topic/issue"></textarea>
-        </div>
-
-        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
-          <button class="btn ghost" id="cancelBooking">Cancel</button>
-          <button class="btn primary" id="confirmBooking">Book</button>
+        <div style="margin-top:10px">
+          <p><b>Name:</b> ${t.name}</p>
+          <p><b>Department:</b> ${t.department}</p>
+          <p><b>Module:</b> ${t.module}</p>
+          <div style="margin-top:10px"><label>Date/Time:</label><input type="datetime-local" id="tutDateTime" style="width:100%"/></div>
+          <div style="margin-top:10px"><label>Topic/Details:</label><textarea id="tutComment" style="width:100%;height:60px"></textarea></div>
+          <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px">
+            <button class="btn warn" id="cancelTut">Cancel</button>
+            <button class="btn primary" id="confirmTut">Book</button>
+          </div>
         </div>
       </div>
     `;
-
     document.body.appendChild(modal);
-    $('#closeModal').onclick = () => modal.remove();
-    $('#cancelBooking').onclick = () => modal.remove();
-    $('#confirmBooking').onclick = () => {
-      const date = $('#bookDate').value;
-      const time = $('#bookTime').value;
-      const comment = $('#bookComment').value;
-      if(!date || !time){
-        alert('Please select date and time.');
-        return;
-      }
-      const datetime = new Date(`${date}T${time}`).toISOString();
-      const request = {
-        id: uid(),
-        type,
-        studentName,
-        tutorOrCounsellorId: id,
-        tutorOrCounsellorName: mainUser.name,
-        datetime,
-        comment,
-        status: 'pending',
-        createdAt: now()
-      };
-
-      if(type==='tutor'){
-        db.studentData.tutoringRequests = db.studentData.tutoringRequests || [];
-        db.studentData.tutoringRequests.unshift(request);
-      } else {
-        db.studentData.counsellingRequests = db.studentData.counsellingRequests || [];
-        db.studentData.counsellingRequests.unshift(request);
-      }
-
-      saveDB(db);
-      alert('Booking submitted!');
+    $('#closeModal').onclick = $('#cancelTut').onclick = ()=> modal.remove();
+    $('#confirmTut').onclick = ()=>{
+      const dt = $('#tutDateTime').value;
+      const comment = $('#tutComment').value;
+      if(!dt) return alert("Select date/time.");
+      addTutoringRequest({tutorId:tutorId,tutorName:t.name,department:t.department,module:t.module,datetime:dt,comment});
+      alert("Tutor booking request sent.");
       modal.remove();
+      drawTutors();
     };
   }
 
-  /* ---------- Initialize ---------- */
+  /* ---------- Counselling Booking Module ---------- */
+  function loadCounselling(){ return loadDB().counsellingRequests || []; }
+  function saveCounselling(list){ const db=loadDB(); db.counsellingRequests=list; saveDB(db); }
+  function addCounsellingRequest(obj){ const list=loadCounselling(); list.unshift(Object.assign({id:uid(), status:'pending', createdAt:now()},obj)); saveCounselling(list); recordAudit("Added counselling request"); }
+
+  function showCounsellingRequestsView(){
+    const db = loadDB();
+    $('#viewContainer').innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div>
+          <div style="font-size:1.2rem;font-weight:700">Counsellor Booking</div>
+          <div class="small-muted">Search & request counsellors</div>
+        </div>
+        <button class="btn ghost" id="backDashCoun">← Dashboard</button>
+      </div>
+
+      <div class="card">
+        <div class="search-row">
+          <input id="searchCoun" placeholder="Search by name, department" style="flex:1"/>
+          <button class="btn primary" id="refreshCoun">Search</button>
+        </div>
+        <div id="counList"></div>
+      </div>
+    `;
+    $('#backDashCoun').onclick = ()=>showView('dashboard');
+    $('#refreshCoun').onclick = drawCounsellors;
+    $('#searchCoun').oninput = drawCounsellors;
+    drawCounsellors();
+  }
+
+  function drawCounsellors(){
+    const listContainer = $('#counList');
+    const db = loadDB();
+    const search = ($('#searchCoun').value || '').toLowerCase();
+    const counsellors = Object.values(db.counsellorData || {}).filter(c=>{
+    return [c.name, c.department].join(' ').toLowerCase().includes(search);
+    });
+
+    if(counsellors.length===0){
+      listContainer.innerHTML = `<div class="empty">No active counsellors at the moment.</div>`;
+      return;
+    }
+
+    listContainer.innerHTML = counsellors.map(c=>`
+      <div class="card">
+        <div><b>${c.name}</b> — ${c.department}</div>
+        <button class="btn primary" onclick="bookCounsellor('${c.id}')">Book</button>
+      </div>
+    `).join('');
+  }
+
+  window.bookCounsellor = function(counId){
+    const db = loadDB();
+    const c = db.counsellorData[counId];
+    if(!c) return alert("Counsellor not found.");
+    const modal = document.createElement('div');
+    modal.className='modal-back';
+    modal.innerHTML = `
+      <div class="modal">
+        <div style="display:flex;justify-content:space-between;">
+          <div style="font-weight:700">Book Counsellor</div>
+          <button class="btn" id="closeModal">✖</button>
+        </div>
+        <div style="margin-top:10px">
+          <p><b>Name:</b> ${c.name}</p>
+          <p><b>Department:</b> ${c.department}</p>
+          <div style="margin-top:10px"><label>Date/Time:</label><input type="datetime-local" id="counDateTime" style="width:100%"/></div>
+          <div style="margin-top:10px"><label>Reason/Notes:</label><textarea id="counComment" style="width:100%;height:60px"></textarea></div>
+          <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px">
+            <button class="btn warn" id="cancelCoun">Cancel</button>
+            <button class="btn primary" id="confirmCoun">Book</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    $('#closeModal').onclick = $('#cancelCoun').onclick = ()=> modal.remove();
+    $('#confirmCoun').onclick = ()=>{
+      const dt = $('#counDateTime').value;
+      const comment = $('#counComment').value;
+      if(!dt) return alert("Select date/time.");
+      addCounsellingRequest({counsellorId:counId, counsellorName:c.name, department:c.department, datetime:dt, comment});
+      alert("Counsellor booking request sent.");
+      modal.remove();
+      drawCounsellors();
+    };
+  }
+
+  /* ---------- Logout ---------- */
+  $('#logoutBtn').onclick = ()=>{
+    alert("Logging out...");
+    location.reload(); // placeholder for real session logout
+  };
+
+  /* ---------- Init ---------- */
   buildUI();
-  render();
+  renderSidebarHandlers();
+  showView('dashboard');
+
 })();
+
 
 
 
