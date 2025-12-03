@@ -8,27 +8,22 @@
 
   const STORAGE_KEY = 'learnbridge_data';
   const THEME_COLOR = '#0073e6';
-  const UNI_KEY = 'uj';
 
   /* ---------- Utilities ---------- */
   const $ = (s, ctx=document) => ctx.querySelector(s);
   const $$ = (s, ctx=document) => Array.from(ctx.querySelectorAll(s));
   const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,8);
   const now = () => new Date().toISOString();
-  const formatDate = (iso) => iso ? new Date(iso).toLocaleString() : '—';
-  const escapeHtml = s => s ? String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) : '';
 
   /* ---------- Storage ---------- */
   function loadDB() {
     return JSON.parse(localStorage.getItem(STORAGE_KEY) || `{
-      "users":[], "audit":[], "sessions":{}, "tutorData":{}, "studentData":{}, "counsellorData":{}, "tutoringRequests":[]
+      "users":[], "audit":[], "sessions":{}, "tutorData":{}, "studentData":{}, "counsellorData":{}, "tutoringRequests":[],"currentStudent":{"id":"stu123","name":"Student User"}
     }`);
   }
-
   function saveDB(db) { localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); }
-  function loadTutoring() { return loadDB().tutoringRequests || []; }
-  function saveTutoring(list){ const db=loadDB(); db.tutoringRequests=list; saveDB(db); }
   function loadUsers() { return loadDB().users || []; }
+  function loadTutoring() { return loadDB().tutoringRequests || []; }
   function recordAudit(action, by='student', details=''){ 
     const db = loadDB();
     db.audit.unshift({id:uid(), action, by, details, time:now()});
@@ -37,48 +32,21 @@
 
   /* ---------- Initialize UI ---------- */
   function buildUI() {
-    document.head.insertAdjacentHTML('beforeend', `
-      <style>
-        :root{--theme:${THEME_COLOR};--panel:#fff;--muted:#666;--radius:10px;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial;}
-        *{box-sizing:border-box}
-        body{margin:0;background:#f7f7f7;color:#222;min-height:100vh;display:flex;flex-direction:column;font-family:Inter, sans-serif;}
-        .student-dashboard{display:flex;max-width:1200px;margin:12px auto;border-radius:var(--radius);overflow:hidden;background:#fff;box-shadow:0 12px 30px rgba(0,0,0,.15);}
-        .side{width:260px;background:linear-gradient(180deg,var(--theme),#222);color:#fff;display:flex;flex-direction:column;justify-content:space-between;padding:12px 0}
-        .side h2{text-align:center;margin:0;padding:12px;font-size:1.05rem;border-bottom:1px solid rgba(255,255,255,.06)}
-        .nav{display:flex;flex-direction:column;padding:6px 0}
-        .nav button{background:none;border:none;color:#fff;padding:12px 18px;text-align:left;cursor:pointer;font-size:14px;border-top:1px solid rgba(255,255,255,.03)}
-        .nav button.active, .nav button:hover{background:rgba(255,255,255,0.06)}
-        .content{flex:1;padding:18px;overflow:auto;max-height:calc(100vh - 48px)}
-        .card{background:var(--panel);border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.06);padding:14px;margin-bottom:14px}
-        .cards{display:flex;gap:12px;flex-wrap:wrap}
-        .card .title{font-weight:700;margin-bottom:6px}
-        .card .big{font-size:1.6rem;font-weight:800;color:var(--theme)}
-        .small-muted{font-size:13px;color:var(--muted)}
-        .btn{padding:8px 10px;border-radius:8px;border:none;cursor:pointer}
-        .btn.primary{background:var(--theme);color:#fff}
-        .btn.ghost{background:transparent;border:1px solid #ddd}
-        .btn.warn{background:#ff4d4f;color:#fff}
-        input, select, textarea{padding:8px;border-radius:6px;border:1px solid #ccc;width:100%;margin-bottom:10px}
-        .modal-back{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:9999}
-        .modal{background:#fff;padding:18px;border-radius:12px;width:100%;max-width:500px;box-shadow:0 10px 40px rgba(0,0,0,.25)}
-        @media(max-width:900px){.student-dashboard{flex-direction:column}.side{width:100%}}
-      </style>
-    `);
+    const container = $('.portal-container');
+    if(!container) return;
 
-    document.body.innerHTML = `
-      <div class="student-dashboard" id="studentRoot">
-        <aside class="side">
-          <div>
-            <h2>Student Portal</h2>
-            <div class="nav">
-              <button class="nav-btn active" data-view="dashboard">🏠 Dashboard</button>
-              <button class="nav-btn" data-view="tutor-booking">📚 Tutor Booking</button>
-            </div>
+    container.innerHTML += `
+      <div class="student-dashboard" style="display:flex;flex-direction:row;gap:20px;margin-top:20px;">
+        <aside class="side" style="width:260px;background:linear-gradient(180deg,${THEME_COLOR},#222);color:#fff;padding:12px 0;border-radius:12px;flex-shrink:0;">
+          <h2 style="text-align:center;margin-bottom:10px;">Student Portal</h2>
+          <div class="nav">
+            <button class="nav-btn active" data-view="dashboard" style="width:100%;padding:10px;border:none;background:none;color:#fff;text-align:left;cursor:pointer;">🏠 Dashboard</button>
+            <button class="nav-btn" data-view="tutor-booking" style="width:100%;padding:10px;border:none;background:none;color:#fff;text-align:left;cursor:pointer;">📚 Tutor Booking</button>
           </div>
-          <div style="padding:12px;color:rgba(255,255,255,.85)">Student • UJ</div>
+          <div style="padding:12px;color:rgba(255,255,255,.85);text-align:center;margin-top:20px;">Student • UJ</div>
         </aside>
 
-        <main class="content" id="mainContent">
+        <main class="content" style="flex:1;min-height:400px;overflow:auto;">
           <div id="viewContainer"></div>
         </main>
       </div>
@@ -114,11 +82,11 @@
     const activeTutors = tutors.filter(t=>t.active).length;
 
     $('#viewContainer').innerHTML = `
-      <div class="cards">
-        <div class="card" style="min-width:200px;cursor:pointer" id="tutorSmallBox">
-          <div class="title">📚 Tutor Booking</div>
-          <div style="margin-top:8px">Click to make a request</div>
-          <div style="margin-top:6px"><b>${activeTutors}</b> active tutors</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <div class="card" style="min-width:200px;cursor:pointer;padding:12px;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.1);" id="tutorSmallBox">
+          <div style="font-weight:700;margin-bottom:6px;">📚 Tutor Booking</div>
+          <div style="margin-bottom:6px;">Click to make a request</div>
+          <div><b>${activeTutors}</b> active tutors</div>
         </div>
       </div>
     `;
@@ -132,19 +100,16 @@
   /* ---------- Tutor Booking ---------- */
   function renderTutorBooking() {
     const users = loadUsers().filter(u=>u.role==='tutor' && u.active);
-    const data = loadTutoring();
 
     $('#viewContainer').innerHTML = `
-      <div class="card">
+      <div class="card" style="padding:16px;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.1);">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
           <div style="font-weight:700;font-size:1.2rem">📚 Tutor Booking</div>
-          <button class="btn ghost" id="backDash">← Dashboard</button>
+          <button class="btn ghost" id="backDash" style="padding:6px 10px;">← Dashboard</button>
         </div>
-        <div style="margin-bottom:12px">
-          <input type="text" id="searchTutor" placeholder="Search by name, module, department" />
-        </div>
+        <input type="text" id="searchTutor" placeholder="Search by name, module, department" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ccc;margin-bottom:10px;" />
         <div><b>${users.length}</b> active tutors</div>
-        <div id="tutorList" style="margin-top:10px"></div>
+        <div id="tutorList" style="margin-top:10px;"></div>
       </div>
     `;
 
@@ -163,15 +128,15 @@
       });
 
       const list = $('#tutorList');
-      if(filtered.length===0){ list.innerHTML='<div class="empty">No tutors found</div>'; return; }
+      if(filtered.length===0){ list.innerHTML='<div>No tutors found</div>'; return; }
 
       list.innerHTML = filtered.map(t=>`
-        <div class="card" style="display:flex;justify-content:space-between;align-items:center">
+        <div class="card" style="display:flex;justify-content:space-between;align-items:center;padding:10px;margin-bottom:10px;border-radius:10px;box-shadow:0 4px 12px rgba(0,0,0,.08);">
           <div>
             <div><b>${t.name}</b> (${t.department})</div>
             <div>${t.module}</div>
           </div>
-          <button class="btn primary" data-id="${t.id}">📅 Book</button>
+          <button class="btn primary" data-id="${t.id}" style="padding:6px 10px;">📅 Book</button>
         </div>
       `).join('');
 
@@ -185,8 +150,9 @@
   function openBookingModal(tutor) {
     const m = document.createElement('div');
     m.className="modal-back";
+    m.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:9999;";
     m.innerHTML=`
-      <div class="modal">
+      <div class="modal" style="background:#fff;padding:18px;border-radius:12px;width:100%;max-width:500px;box-shadow:0 10px 40px rgba(0,0,0,.25);">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
           <div style="font-weight:700">Book Tutor</div>
           <button class="btn" id="closeX">✖</button>
@@ -244,4 +210,6 @@
 
   /* ---------- Initialize ---------- */
   buildUI();
+
 })();
+
